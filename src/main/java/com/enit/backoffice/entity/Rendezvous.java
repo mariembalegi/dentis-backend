@@ -20,6 +20,10 @@ public class Rendezvous {
     @JoinColumn(name = "idD", nullable = false)
     private Dentiste dentiste; // correction du nom de variable
 
+    @ManyToOne
+    @JoinColumn(name = "numSM")
+    private ServiceMedical serviceMedical;
+
     private LocalDate dateRv;
     private LocalTime heureRv;
 
@@ -55,6 +59,14 @@ public class Rendezvous {
 
     public void setDentiste(Dentiste dentiste) {
         this.dentiste = dentiste;
+    }
+
+    public ServiceMedical getServiceMedical() {
+        return serviceMedical;
+    }
+
+    public void setServiceMedical(ServiceMedical serviceMedical) {
+        this.serviceMedical = serviceMedical;
     }
 
     public LocalDate getDateRv() {

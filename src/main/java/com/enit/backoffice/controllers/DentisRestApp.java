@@ -1,4 +1,4 @@
-package com.enit.backoffice.webservice;
+package com.enit.backoffice.controllers;
 
 
 import jakarta.ws.rs.ApplicationPath; 

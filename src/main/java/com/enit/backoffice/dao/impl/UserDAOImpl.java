@@ -49,4 +49,9 @@ public class UserDAOImpl implements IUserDAO {
         user.setMotDePasse(org.mindrot.jbcrypt.BCrypt.hashpw(user.getMotDePasse(), org.mindrot.jbcrypt.BCrypt.gensalt()));
         em.persist(user);
     }
+
+    @Override
+    public User findById(int id) {
+        return em.find(User.class, id);
+    }
 }

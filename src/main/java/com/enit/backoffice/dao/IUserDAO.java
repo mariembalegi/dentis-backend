@@ -19,4 +19,6 @@ public interface IUserDAO {
     
     // Ajouter User
     public void addUser(User user);
+    
+    public User findById(int id);
 }

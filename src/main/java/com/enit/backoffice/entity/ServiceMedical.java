@@ -22,6 +22,13 @@ public class ServiceMedical {
     @Column(precision = 6, scale = 2)
     private BigDecimal tarifSM;
 
+    @Column(columnDefinition = "TEXT")
+    private String image;
+
+    @ManyToOne
+    @JoinColumn(name = "idD", nullable = false)
+    private Dentiste dentiste;
+
     // ===== Getters =====
 
     public Integer getNumSM() {
@@ -65,4 +72,10 @@ public class ServiceMedical {
     public void setTarifSM(BigDecimal tarifSM) {
         this.tarifSM = tarifSM;
     }
+
+    public String getImage() { return image; }
+    public void setImage(String image) { this.image = image; }
+
+    public Dentiste getDentiste() { return dentiste; }
+    public void setDentiste(Dentiste dentiste) { this.dentiste = dentiste; }
 }
