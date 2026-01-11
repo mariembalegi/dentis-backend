@@ -15,7 +15,7 @@ public class Patient extends User {
     private LocalDate dateNaissanceP;
 
     @Column(name = "groupeSanguinP", length = 2)
-    private String groupeSanguinP; // A, B, O, AB
+    private String groupeSanguinP; 
 
     @Column(name = "recouvrementP", length = 100)
     private String recouvrementP;
@@ -23,12 +23,10 @@ public class Patient extends User {
     @OneToMany(mappedBy = "patient", cascade = CascadeType.ALL,  orphanRemoval = true)
     private List<Rendezvous> rendezvous;
 
-    // 🔹 Constructeur par défaut 
     public Patient() {
         super();
     }
 
-    // 🔹 Getters & Setters
     public LocalDate getDateNaissanceP() {
         return dateNaissanceP;
     }

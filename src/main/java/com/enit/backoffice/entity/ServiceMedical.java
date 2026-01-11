@@ -28,6 +28,9 @@ public class ServiceMedical {
     @ManyToOne
     @JoinColumn(name = "idD", nullable = false)
     private Dentiste dentiste;
+    
+    @OneToMany(mappedBy = "serviceMedical", cascade = CascadeType.ALL, orphanRemoval = true)
+    private java.util.List<ActeMedical> actes;
 
     // ===== Getters =====
 
@@ -78,4 +81,7 @@ public class ServiceMedical {
 
     public Dentiste getDentiste() { return dentiste; }
     public void setDentiste(Dentiste dentiste) { this.dentiste = dentiste; }
+    
+    public java.util.List<ActeMedical> getActes() { return actes; }
+    public void setActes(java.util.List<ActeMedical> actes) { this.actes = actes; }
 }

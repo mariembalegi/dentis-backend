@@ -3,6 +3,7 @@ package com.enit.backoffice.controllers;
 import com.enit.backoffice.dao.IRendezvousDAO;
 import com.enit.backoffice.dao.IServiceMedicalDAO;
 import com.enit.backoffice.dao.IUserDAO;
+import com.enit.backoffice.dao.IActeMedicalDAO; // New import
 import com.enit.backoffice.dto.RendezvousDTO;
 import com.enit.backoffice.entity.*;
 
@@ -24,6 +25,7 @@ public class RendezvousRest {
     @EJB IRendezvousDAO rvDAO;
     @EJB IUserDAO userDAO;
     @EJB IServiceMedicalDAO serviceDAO;
+    @EJB IActeMedicalDAO acteDAO; // New EJB
 
     private RendezvousDTO mapToDTO(Rendezvous r) {
         RendezvousDTO dto = new RendezvousDTO();
@@ -36,9 +38,12 @@ public class RendezvousRest {
         dto.setDentistId(r.getDentiste().getId());
         dto.setPatientName(r.getPatient().getNom() + " " + r.getPatient().getPrenom());
         dto.setDentistName(r.getDentiste().getNom() + " " + r.getDentiste().getPrenom());
-        if(r.getServiceMedical() != null) {
-            dto.setServiceId(r.getServiceMedical().getNumSM());
-            dto.setServiceName(r.getServiceMedical().getNomSM());
+        
+        // Show Acts info if any (using the first one for display if user selected one)
+        if(r.getActes() != null && !r.getActes().isEmpty()) {
+             ActeMedical firstActe = r.getActes().get(0);
+             dto.setServiceId(firstActe.getServiceMedical().getNumSM());
+             dto.setServiceName(firstActe.getServiceMedical().getNomSM());
         }
         return dto;
     }
@@ -62,13 +67,24 @@ public class RendezvousRest {
         Rendezvous rv = new Rendezvous();
         rv.setPatient(patient);
         rv.setDentiste(dentiste);
-        rv.setServiceMedical(service);
+        // rv.setServiceMedical(service); // Removed
         rv.setDateRv(dto.getDateRv());
         rv.setHeureRv(dto.getHeureRv());
         rv.setDescriptionRv(dto.getDescriptionRv());
-        rv.setStatutRv("PENDING"); // Default status
+        rv.setStatutRv("PENDING"); 
 
         rvDAO.addRendezvous(rv);
+        
+        // Create ActeMedical if service was selected
+        if(service != null) {
+            ActeMedical acte = new ActeMedical();
+            acte.setRendezvous(rv);
+            acte.setServiceMedical(service);
+            acte.setDescriptionAM(dto.getDescriptionRv()); 
+            acte.setTarifAM(service.getTarifSM()); // Use current service price as default
+            acteDAO.addActe(acte);
+        }
+        
         return Response.ok("Rendezvous booked successfully").build();
     }
 

@@ -20,9 +20,8 @@ public class Rendezvous {
     @JoinColumn(name = "idD", nullable = false)
     private Dentiste dentiste; // correction du nom de variable
 
-    @ManyToOne
-    @JoinColumn(name = "numSM")
-    private ServiceMedical serviceMedical;
+    @OneToMany(mappedBy = "rendezvous", cascade = CascadeType.ALL, orphanRemoval = true)
+    private java.util.List<ActeMedical> actes;
 
     private LocalDate dateRv;
     private LocalTime heureRv;
@@ -61,12 +60,12 @@ public class Rendezvous {
         this.dentiste = dentiste;
     }
 
-    public ServiceMedical getServiceMedical() {
-        return serviceMedical;
+    public java.util.List<ActeMedical> getActes() {
+        return actes;
     }
 
-    public void setServiceMedical(ServiceMedical serviceMedical) {
-        this.serviceMedical = serviceMedical;
+    public void setActes(java.util.List<ActeMedical> actes) {
+        this.actes = actes;
     }
 
     public LocalDate getDateRv() {

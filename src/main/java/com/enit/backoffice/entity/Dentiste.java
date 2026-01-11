@@ -24,12 +24,10 @@ public class Dentiste extends User {
     @OneToMany(mappedBy = "dentiste", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ServiceMedical> services;
 
-    // Constructeur par défaut 
     public Dentiste() {
         super();
     }
 
-    // Getters et Setters
     public String getSpecialiteD() {
         return specialiteD;
     }
