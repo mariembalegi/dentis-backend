@@ -53,11 +53,15 @@ public class RendezvousRest {
         HttpSession session = req.getSession(false);
         if (session == null || session.getAttribute("user") == null) return Response.status(Response.Status.UNAUTHORIZED).build();
         User user = (User) session.getAttribute("user");
-        if (!(user instanceof Patient)) return Response.status(Response.Status.FORBIDDEN).entity("Only patients can book").build();
+        if (!(user instanceof Patient)) return Response.status(Response.Status.FORBIDDEN).entity(new java.util.HashMap<String, Object>() {{
+            put("error", "Only patients can book");
+        }}).build();
 
         Patient patient = (Patient) user;
         Dentiste dentiste = (Dentiste) userDAO.findById(dto.getDentistId());
-        if(dentiste == null) return Response.status(Response.Status.BAD_REQUEST).entity("Dentist not found").build();
+        if(dentiste == null) return Response.status(Response.Status.BAD_REQUEST).entity(new java.util.HashMap<String, Object>() {{
+            put("error", "Dentist not found");
+        }}).build();
         
         ServiceMedical service = null;
         if(dto.getServiceId() != null) {
@@ -85,7 +89,10 @@ public class RendezvousRest {
             acteDAO.addActe(acte);
         }
         
-        return Response.ok("Rendezvous booked successfully").build();
+        return Response.ok(new java.util.HashMap<String, Object>() {{
+            put("message", "Rendezvous booked successfully");
+            put("id", rv.getIdRv());
+        }}).build();
     }
 
     @GET
@@ -124,9 +131,14 @@ public class RendezvousRest {
         if("VALIDATED".equalsIgnoreCase(status) || "REFUSED".equalsIgnoreCase(status)) {
             rv.setStatutRv(status.toUpperCase());
             rvDAO.updateRendezvous(rv);
-            return Response.ok("Status updated").build();
+            return Response.ok(new java.util.HashMap<String, Object>() {{
+                put("message", "Status updated");
+                put("status", status.toUpperCase());
+            }}).build();
         }
-        return Response.status(Response.Status.BAD_REQUEST).entity("Invalid status").build();
+        return Response.status(Response.Status.BAD_REQUEST).entity(new java.util.HashMap<String, Object>() {{
+            put("error", "Invalid status");
+        }}).build();
     }
     
     @PUT
@@ -142,7 +154,9 @@ public class RendezvousRest {
         if(rv.getPatient().getId() != user.getId()) return Response.status(Response.Status.FORBIDDEN).build();
 
         if(!"PENDING".equalsIgnoreCase(rv.getStatutRv())) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("Cannot modify validated/refused rendezvous").build();
+            return Response.status(Response.Status.BAD_REQUEST).entity(new java.util.HashMap<String, Object>() {{
+                put("error", "Cannot modify validated/refused rendezvous");
+            }}).build();
         }
         
         // Update fields if provided
@@ -156,6 +170,9 @@ public class RendezvousRest {
         }
 
         rvDAO.updateRendezvous(rv);
-        return Response.ok("Rendezvous updated").build();
+        return Response.ok(new java.util.HashMap<String, Object>() {{
+            put("message", "Rendezvous updated");
+            put("id", rv.getIdRv());
+        }}).build();
     }
 }

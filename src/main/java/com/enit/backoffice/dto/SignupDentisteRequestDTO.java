@@ -9,8 +9,8 @@ public class SignupDentisteRequestDTO {
     private String sexe;
     private String photo;
     
-    private String specialiteD;
     private String diplome;
+    private String ville;
 
     public String getNom() { return nom; }
     public void setNom(String nom) { this.nom = nom; }
@@ -26,8 +26,8 @@ public class SignupDentisteRequestDTO {
     public void setSexe(String sexe) { this.sexe = sexe; }
     public String getPhoto() { return photo; }
     public void setPhoto(String photo) { this.photo = photo; }
-    public String getSpecialiteD() { return specialiteD; }
-    public void setSpecialiteD(String specialiteD) { this.specialiteD = specialiteD; }
     public String getDiplome() { return diplome; }
     public void setDiplome(String diplome) { this.diplome = diplome; }
+    public String getVille() { return ville; }
+    public void setVille(String ville) { this.ville = ville; } 
 }

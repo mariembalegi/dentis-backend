@@ -50,10 +50,16 @@ public class UserRestServices {
 	    public Response checkEmail(@PathParam("email") String email) {
 
 	        if (userDAO.existsByEmail(email)) {
-	            return Response.ok().build(); // 200 OK
-	        } else {
-	            return Response.status(Response.Status.NOT_FOUND)
-	                           .entity("Email n'existe pas")
+            return Response.ok(new java.util.HashMap<String, Object>() {{
+                put("exists", true);
+                put("email", email);
+            }}).build();
+        } else {
+            return Response.status(Response.Status.NOT_FOUND)
+                           .entity(new java.util.HashMap<String, Object>() {{
+                               put("exists", false);
+                               put("message", "Email n'existe pas");
+                           }})
 	                           .build();
 	        }
 	    }
@@ -67,7 +73,9 @@ public class UserRestServices {
 		  HashMap<String, Object> response = new HashMap<>();
 		  User userFromDB = userDAO.findByEmail(user.getEmail());
                    if(userFromDB == null) {
-                       return Response.status(Response.Status.UNAUTHORIZED).entity("User not found").build();
+                       return Response.status(Response.Status.UNAUTHORIZED).entity(new java.util.HashMap<String, Object>() {{
+                           put("error", "User not found");
+                       }}).build();
                    }
 		  String role;
 		  LoginUserResponseDTO dto;
@@ -93,7 +101,7 @@ public class UserRestServices {
           } else if (userFromDB instanceof Dentiste dentiste) {
             role = "DENTISTE";
             LoginDentisteResponseDTO dDto = new LoginDentisteResponseDTO();
-            dDto.setSpecialiteD(dentiste.getSpecialiteD());
+            // Removed: dDto.setSpecialiteD(dentiste.getSpecialiteD());
             dto = dDto;
 	      }
 	     
@@ -129,20 +137,26 @@ public class UserRestServices {
 
       @GET
       @Path("/logout")
+      @Produces(MediaType.APPLICATION_JSON)
       public Response logout(@Context HttpServletRequest req) {
           HttpSession session = req.getSession(false);
           if (session != null) {
               session.invalidate();
           }
-          return Response.ok("Logged out").build();
+          return Response.ok(new java.util.HashMap<String, Object>() {{
+              put("message", "Logged out");
+          }}).build();
       }
 
       @POST
       @Path("/signup/patient")
       @Consumes(MediaType.APPLICATION_JSON)
+      @Produces(MediaType.APPLICATION_JSON)
       public Response signupPatient(SignupPatientRequestDTO dto) {
           if (userDAO.existsByEmail(dto.getEmail())) {
-              return Response.status(Response.Status.BAD_REQUEST).entity("Email exists").build();
+              return Response.status(Response.Status.BAD_REQUEST).entity(new java.util.HashMap<String, Object>() {{
+                  put("error", "Email exists");
+              }}).build();
           }
           Patient p = new Patient();
           p.setNom(dto.getNom());
@@ -157,15 +171,21 @@ public class UserRestServices {
           p.setRecouvrementP(dto.getRecouvrementP());
           
           userDAO.addUser(p);
-          return Response.ok("Patient registered").build();
+          return Response.ok(new java.util.HashMap<String, Object>() {{
+              put("message", "Patient registered");
+              put("id", p.getId());
+          }}).build();
       }
 
       @POST
       @Path("/signup/dentist")
       @Consumes(MediaType.APPLICATION_JSON)
+      @Produces(MediaType.APPLICATION_JSON)
       public Response signupDentist(SignupDentisteRequestDTO dto) {
           if (userDAO.existsByEmail(dto.getEmail())) {
-              return Response.status(Response.Status.BAD_REQUEST).entity("Email exists").build();
+              return Response.status(Response.Status.BAD_REQUEST).entity(new java.util.HashMap<String, Object>() {{
+                  put("error", "Email exists");
+              }}).build();
           }
           Dentiste d = new Dentiste();
           d.setNom(dto.getNom());
@@ -175,10 +195,41 @@ public class UserRestServices {
           d.setTel(dto.getTel());
           d.setSexe(dto.getSexe());
           d.setPhoto(dto.getPhoto());
-          d.setSpecialiteD(dto.getSpecialiteD());
           d.setDiplome(dto.getDiplome());
+          d.setVille(dto.getVille());
           
           userDAO.addUser(d);
-          return Response.ok("Dentist registered").build();
+          return Response.ok(new java.util.HashMap<String, Object>() {{
+              put("message", "Dentist registered");
+              put("id", d.getId());
+          }}).build();
+      }
+      
+      @GET
+      @Path("/patients")
+      @Produces(MediaType.APPLICATION_JSON)
+      public Response getAllPatients() {
+    	  return Response.ok(userDAO.getAllPatients()).build();
+      }
+      
+      @GET
+      @Path("/search/dentist")
+      @Produces(MediaType.APPLICATION_JSON)
+      public Response searchDentists(@jakarta.ws.rs.QueryParam("q") String keyword, @jakarta.ws.rs.QueryParam("loc") String location) {
+          java.util.List<Dentiste> dentistes = userDAO.searchDentists(keyword, location);
+          
+          // Map to DTO to avoid recursion/infinite loop with bidirectional relationships
+          java.util.List<java.util.Map<String, Object>> result = dentistes.stream().map(d -> {
+              java.util.Map<String, Object> map = new java.util.HashMap<>();
+              map.put("id", d.getId());
+              map.put("nom", d.getNom());
+              map.put("prenom", d.getPrenom());
+              map.put("ville", d.getVille());
+              map.put("photo", d.getPhoto());
+              map.put("tel", d.getTel());
+              return map;
+          }).collect(java.util.stream.Collectors.toList());
+          
+          return Response.ok(result).build();
       }
 }

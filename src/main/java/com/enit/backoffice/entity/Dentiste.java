@@ -12,11 +12,11 @@ import jakarta.persistence.*;
 public class Dentiste extends User {
 	private static final long serialVersionUID = 1L;
 
-    @Column(name = "specialiteD", length = 100)
-    private String specialiteD;
-
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "LONGTEXT")
     private String diplome;
+    
+    @Column(nullable = true, length = 100)
+    private String ville;
     
     @OneToMany(mappedBy = "dentiste", cascade = CascadeType.ALL,  orphanRemoval = true)
     private List<Rendezvous> rendezvous;
@@ -28,20 +28,20 @@ public class Dentiste extends User {
         super();
     }
 
-    public String getSpecialiteD() {
-        return specialiteD;
-    }
-
-    public void setSpecialiteD(String specialiteD) {
-        this.specialiteD = specialiteD;
-    }
-
     public String getDiplome() {
         return diplome;
     }
 
     public void setDiplome(String diplome) {
         this.diplome = diplome;
+    }
+    
+    public String getVille() {
+        return ville;
+    }
+
+    public void setVille(String ville) {
+        this.ville = ville;
     }
     
     public List<Rendezvous> getRendezvous() { return rendezvous; }

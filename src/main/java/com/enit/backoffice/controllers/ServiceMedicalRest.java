@@ -47,11 +47,15 @@ public class ServiceMedicalRest {
     public Response addService(ServiceMedicalDTO dto, @Context HttpServletRequest req) {
         HttpSession session = req.getSession(false);
         if (session == null || session.getAttribute("user") == null) {
-            return Response.status(Response.Status.UNAUTHORIZED).entity("User not logged in").build();
+            return Response.status(Response.Status.UNAUTHORIZED).entity(new java.util.HashMap<String, Object>() {{
+                put("error", "User not logged in");
+            }}).build();
         }
         User user = (User) session.getAttribute("user");
         if (!(user instanceof Dentiste)) {
-            return Response.status(Response.Status.FORBIDDEN).entity("Only dentists can add services").build();
+            return Response.status(Response.Status.FORBIDDEN).entity(new java.util.HashMap<String, Object>() {{
+                put("error", "Only dentists can add services");
+            }}).build();
         }
 
         Dentiste dentiste = (Dentiste) user;
@@ -64,7 +68,10 @@ public class ServiceMedicalRest {
         service.setDentiste(dentiste);
 
         serviceDAO.addService(service);
-        return Response.ok("Service added successfully").build();
+        return Response.ok(new java.util.HashMap<String, Object>() {{
+            put("message", "Service added successfully");
+            put("id", service.getNumSM());
+        }}).build();
     }
 
     @PUT
@@ -88,7 +95,10 @@ public class ServiceMedicalRest {
         service.setImage(dto.getImage());
         
         serviceDAO.updateService(service);
-        return Response.ok("Service updated").build();
+        return Response.ok(new java.util.HashMap<String, Object>() {{
+            put("message", "Service updated");
+            put("id", service.getNumSM());
+        }}).build();
     }
 
     @DELETE
@@ -106,7 +116,10 @@ public class ServiceMedicalRest {
         }
         
         serviceDAO.deleteService(id);
-        return Response.ok("Service deleted").build();
+        return Response.ok(new java.util.HashMap<String, Object>() {{
+            put("message", "Service deleted");
+            put("id", id);
+        }}).build();
     }
 
     @GET
