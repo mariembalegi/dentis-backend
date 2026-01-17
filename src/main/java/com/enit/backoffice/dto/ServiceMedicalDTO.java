@@ -7,7 +7,6 @@ public class ServiceMedicalDTO {
     private String typeSM;
     private String descriptionSM;
     private BigDecimal tarifSM;
-    private String image;
     private int dentistId;
 
     public Integer getNumSM() { return numSM; }
@@ -20,8 +19,6 @@ public class ServiceMedicalDTO {
     public void setDescriptionSM(String descriptionSM) { this.descriptionSM = descriptionSM; }
     public BigDecimal getTarifSM() { return tarifSM; }
     public void setTarifSM(BigDecimal tarifSM) { this.tarifSM = tarifSM; }
-    public String getImage() { return image; }
-    public void setImage(String image) { this.image = image; }
     public int getDentistId() { return dentistId; }
     public void setDentistId(int dentistId) { this.dentistId = dentistId; }
 }

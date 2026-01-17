@@ -5,6 +5,7 @@ import io.jsonwebtoken.security.Keys;
 
 import java.security.Key;
 import java.util.HashMap;
+import java.nio.charset.StandardCharsets;
 
 import org.mindrot.jbcrypt.BCrypt;
 
@@ -124,7 +125,8 @@ public class UserRestServices {
 	    	   dto=aDto;
 	      }
 		
-          Key key = Keys.hmacShaKeyFor("MaCleSuperSecrete1234567890123456".getBytes());
+          // Use UTF-8 for consistency
+          Key key = Keys.hmacShaKeyFor("MaCleSuperSecrete1234567890123456".getBytes(StandardCharsets.UTF_8));
 
           String token = Jwts.builder()
                   .setSubject(userFromDB.getEmail())
@@ -137,6 +139,11 @@ public class UserRestServices {
           dto.setPrenom(userFromDB.getPrenom());
           dto.setEmail(userFromDB.getEmail());
           dto.setRole(role);
+          dto.setTel(userFromDB.getTel());
+          if (userFromDB.getSexe() != null) {
+              dto.setSexe(userFromDB.getSexe().toString());
+          }
+          dto.setPhoto(userFromDB.getPhoto());
           dto.setToken(token);
 
           response.put("user", dto);

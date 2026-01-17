@@ -26,9 +26,6 @@ public class ServiceMedical implements Serializable {
     @Column(precision = 6, scale = 2)
     private BigDecimal tarifSM;
 
-    @Column(columnDefinition = "TEXT")
-    private String image;
-
     @ManyToOne
     @JoinColumn(name = "idD", nullable = false)
     private Dentiste dentiste;
@@ -79,9 +76,6 @@ public class ServiceMedical implements Serializable {
     public void setTarifSM(BigDecimal tarifSM) {
         this.tarifSM = tarifSM;
     }
-
-    public String getImage() { return image; }
-    public void setImage(String image) { this.image = image; }
 
     public Dentiste getDentiste() { return dentiste; }
     public void setDentiste(Dentiste dentiste) { this.dentiste = dentiste; }

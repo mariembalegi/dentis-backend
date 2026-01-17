@@ -36,7 +36,6 @@ public class ServiceMedicalRest {
         dto.setTypeSM(s.getTypeSM() != null ? s.getTypeSM().getLabel() : null);
         dto.setDescriptionSM(s.getDescriptionSM());
         dto.setTarifSM(s.getTarifSM());
-        dto.setImage(s.getImage());
         if(s.getDentiste() != null) {
             dto.setDentistId(s.getDentiste().getId());
         }
@@ -52,6 +51,7 @@ public class ServiceMedicalRest {
             }}).build();
         }
         User user = (User) session.getAttribute("user");
+        
         if (!(user instanceof Dentiste)) {
             return Response.status(Response.Status.FORBIDDEN).entity(new java.util.HashMap<String, Object>() {{
                 put("error", "Only dentists can add services");
@@ -66,7 +66,6 @@ public class ServiceMedicalRest {
         }
         service.setDescriptionSM(dto.getDescriptionSM());
         service.setTarifSM(dto.getTarifSM());
-        service.setImage(dto.getImage()); // Base64
         service.setDentiste(dentiste);
 
         serviceDAO.addService(service);
@@ -96,7 +95,6 @@ public class ServiceMedicalRest {
         }
         service.setDescriptionSM(dto.getDescriptionSM());
         service.setTarifSM(dto.getTarifSM());
-        service.setImage(dto.getImage());
         
         serviceDAO.updateService(service);
         return Response.ok(new java.util.HashMap<String, Object>() {{
@@ -127,19 +125,23 @@ public class ServiceMedicalRest {
     }
 
     @GET
-    public Response getAllServices() {
-        List<ServiceMedicalDTO> dtos = serviceDAO.findAll().stream().map(this::mapToDTO).collect(Collectors.toList());
-        return Response.ok(dtos).build();
-    }
-    
-    @GET
-    @Path("/dentist/me")
-    public Response getMyServices(@Context HttpServletRequest req) {
+    public Response getAllServices(@Context HttpServletRequest req) {
         HttpSession session = req.getSession(false);
-        if (session == null || session.getAttribute("user") == null) return Response.status(Response.Status.UNAUTHORIZED).build();
+        if (session == null || session.getAttribute("user") == null) {
+            return Response.status(Response.Status.UNAUTHORIZED).entity(new java.util.HashMap<String, Object>() {{
+                put("error", "User not logged in");
+            }}).build();
+        }
+        
         User user = (User) session.getAttribute("user");
         
-        List<ServiceMedicalDTO> dtos = serviceDAO.findByDentistId(user.getId()).stream().map(this::mapToDTO).collect(Collectors.toList());
-        return Response.ok(dtos).build();
+        if (user instanceof Dentiste) {
+            List<ServiceMedicalDTO> dtos = serviceDAO.findByDentistId(user.getId()).stream().map(this::mapToDTO).collect(Collectors.toList());
+            return Response.ok(dtos).build();
+        } else {
+             return Response.status(Response.Status.FORBIDDEN).entity(new java.util.HashMap<String, Object>() {{
+                put("error", "Access restricted to connected dentists");
+            }}).build();
+        }
     }
 }
