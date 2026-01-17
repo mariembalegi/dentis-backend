@@ -16,7 +16,7 @@ public class Rendezvous implements Serializable {
     private Integer idRv;
 
     @ManyToOne
-    @JoinColumn(name = "idP", nullable = false)
+    @JoinColumn(name = "idP", nullable = true)
     private Patient patient;
 
     @ManyToOne
@@ -29,8 +29,9 @@ public class Rendezvous implements Serializable {
     private LocalDate dateRv;
     private LocalTime heureRv;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 100)
-    private String statutRv;
+    private StatutRendezvous statutRv;
 
     @Column(columnDefinition = "TEXT")
     private String descriptionRv;
@@ -87,11 +88,11 @@ public class Rendezvous implements Serializable {
         this.heureRv = heureRv;
     }
 
-    public String getStatutRv() {
+    public StatutRendezvous getStatutRv() {
         return statutRv;
     }
 
-    public void setStatutRv(String statutRv) {
+    public void setStatutRv(StatutRendezvous statutRv) {
         this.statutRv = statutRv;
     }
 

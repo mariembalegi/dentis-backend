@@ -18,7 +18,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Path("/publications")
+@Path("/publicationRest")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class PublicationRest {
@@ -45,6 +45,7 @@ public class PublicationRest {
 
     // 1. Ajouter une publication (Dentiste uniquement) -> valide = false
     @POST
+    @Path("/add")
     public Response addPublication(PublicationDTO dto, @Context HttpServletRequest req) {
         HttpSession session = req.getSession(false);
         if (session == null || session.getAttribute("user") == null) {
@@ -77,6 +78,7 @@ public class PublicationRest {
 
     // 2. Récupérer toutes les publications validées (Pour tout le monde)
     @GET
+    @Path("/publications")
     public Response getAllValidPublications() {
         List<PublicationDTO> list = publicationDAO.findAllValid().stream()
                 .map(this::mapToDTO)
@@ -84,7 +86,7 @@ public class PublicationRest {
         return Response.ok(list).build();
     }
 
-    // 3. Récupérer les publications en attente (Pour Admin uniquement)
+    // 3. Récupérer les publications en attente (Admin ou Dentiste pour ses propres publications)
     @GET
     @Path("/pending")
     public Response getPendingPublications(@Context HttpServletRequest req) {
@@ -92,15 +94,24 @@ public class PublicationRest {
         if (session == null || session.getAttribute("user") == null) return Response.status(Response.Status.UNAUTHORIZED).build();
         
         User user = (User) session.getAttribute("user");
-        // Vérification très basique si c'est un Admin (instanceof Admin check)
-        // Adjuster selon votre logique de role exacte (ex: if (!"ADMIN".equals(role)))
-        if (!(user instanceof Admin)) {
+        
+        List<PublicationDTO> list;
+        
+        if (user instanceof Admin) {
+             // Admin voit toutes les publications en attente
+             list = publicationDAO.findAllPending().stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+        } else if (user instanceof Dentiste) {
+             // Dentiste voit seulement ses propres publications en attente
+             list = publicationDAO.findAllPending().stream()
+                .filter(p -> p.getDentiste().getId() == user.getId())
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+        } else {
              return Response.status(Response.Status.FORBIDDEN).build();
         }
 
-        List<PublicationDTO> list = publicationDAO.findAllPending().stream()
-                .map(this::mapToDTO)
-                .collect(Collectors.toList());
         return Response.ok(list).build();
     }
 
@@ -127,6 +138,29 @@ public class PublicationRest {
         }}).build();
     }
 
+    // 8. Invalider / Dépublier une publication (Admin uniquement)
+    @PUT
+    @Path("/{id}/invalidate")
+    public Response invalidatePublication(@PathParam("id") int id, @Context HttpServletRequest req) {
+        HttpSession session = req.getSession(false);
+        if (session == null || session.getAttribute("user") == null) return Response.status(Response.Status.UNAUTHORIZED).build();
+        
+        User user = (User) session.getAttribute("user");
+        if (!(user instanceof Admin)) {
+             return Response.status(Response.Status.FORBIDDEN).build();
+        }
+
+        Publication p = publicationDAO.findById(id);
+        if (p == null) return Response.status(Response.Status.NOT_FOUND).build();
+
+        p.setValide(false);
+        publicationDAO.updatePublication(p);
+
+        return Response.ok(new java.util.HashMap<String, Object>() {{
+            put("message", "Publication dépubliée (remise en attente)");
+        }}).build();
+    }
+
     // 5. Rejeter / Supprimer une publication (Admin ou Propriétaire)
     @DELETE
     @Path("/{id}")
@@ -149,6 +183,42 @@ public class PublicationRest {
         publicationDAO.deletePublication(id);
         return Response.ok(new java.util.HashMap<String, Object>() {{
             put("message", "Publication supprimée");
+        }}).build();
+    }
+
+    // 7. Modifier une publication (Dentiste) -> redevient non valide
+    @PUT
+    @Path("/{id}")
+    public Response updatePublication(@PathParam("id") int id, PublicationDTO dto, @Context HttpServletRequest req) {
+        HttpSession session = req.getSession(false);
+        if (session == null || session.getAttribute("user") == null) return Response.status(Response.Status.UNAUTHORIZED).build();
+        User user = (User) session.getAttribute("user");
+
+        Publication p = publicationDAO.findById(id);
+        if (p == null) return Response.status(Response.Status.NOT_FOUND).build();
+
+        // Seul le propriétaire peut modifier
+        if (!(user instanceof Dentiste) || p.getDentiste().getId() != user.getId()) {
+            return Response.status(Response.Status.FORBIDDEN).entity("Vous ne pouvez modifier que vos publications").build();
+        }
+
+        // Mise à jour des champs
+        if(dto.getTitrePub() != null) p.setTitrePub(dto.getTitrePub());
+        if(dto.getDescription() != null) p.setDescription(dto.getDescription());
+        if(dto.getFichierPub() != null) p.setFichierPub(dto.getFichierPub());
+        if(dto.getAffichePub() != null) p.setAffichePub(dto.getAffichePub());
+        if(dto.getTypePub() != null) {
+             p.setTypePub(com.enit.backoffice.entity.TypePublication.fromLabel(dto.getTypePub()));
+        }
+        
+        // IMPORTANT: Toute modification nécessite une nouvelle validation
+        p.setValide(false);
+        
+        publicationDAO.updatePublication(p);
+
+        return Response.ok(new java.util.HashMap<String, Object>() {{
+            put("message", "Publication modifiée et remise en attente de validation");
+            put("id", p.getIdPub());
         }}).build();
     }
 

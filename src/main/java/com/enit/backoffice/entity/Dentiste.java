@@ -40,6 +40,9 @@ public class Dentiste extends User {
     @OneToMany(mappedBy = "dentiste", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Horaire> horaires;
 
+    @OneToMany(mappedBy = "dentiste", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ServiceMedical> services;
+
     public Dentiste() {
         super();
     }

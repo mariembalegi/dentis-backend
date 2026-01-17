@@ -27,10 +27,12 @@ public class Publication implements Serializable {
     @Column(columnDefinition = "LONGTEXT")
     private String description;
 
-    @Column
+    @Lob
+    @Column(columnDefinition = "LONGTEXT")
     private String fichierPub;
 
-    @Column
+    @Lob
+    @Column(columnDefinition = "LONGTEXT")
     private String affichePub;
 
     @Column

@@ -17,7 +17,7 @@ import jakarta.ws.rs.core.Response;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Path("/rendezvous")
+@Path("/rendezvousREST")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class RendezvousRest {
@@ -32,11 +32,13 @@ public class RendezvousRest {
         dto.setIdRv(r.getIdRv());
         dto.setDateRv(r.getDateRv());
         dto.setHeureRv(r.getHeureRv());
-        dto.setStatutRv(r.getStatutRv());
+        dto.setStatutRv(r.getStatutRv().name());
         dto.setDescriptionRv(r.getDescriptionRv());
-        dto.setPatientId(r.getPatient().getId());
+        if(r.getPatient() != null) {
+            dto.setPatientId(r.getPatient().getId());
+            dto.setPatientName(r.getPatient().getNom() + " " + r.getPatient().getPrenom());
+        }
         dto.setDentistId(r.getDentiste().getId());
-        dto.setPatientName(r.getPatient().getNom() + " " + r.getPatient().getPrenom());
         dto.setDentistName(r.getDentiste().getNom() + " " + r.getDentiste().getPrenom());
         
         // Show Acts info if any (using the first one for display if user selected one)
@@ -49,48 +51,34 @@ public class RendezvousRest {
     }
 
     @POST
-    public Response bookRendezvous(RendezvousDTO dto, @Context HttpServletRequest req) {
+    @Path("/add")
+    public Response addRendezvous(RendezvousDTO dto, @Context HttpServletRequest req) {
         HttpSession session = req.getSession(false);
         if (session == null || session.getAttribute("user") == null) return Response.status(Response.Status.UNAUTHORIZED).build();
         User user = (User) session.getAttribute("user");
-        if (!(user instanceof Patient)) return Response.status(Response.Status.FORBIDDEN).entity(new java.util.HashMap<String, Object>() {{
-            put("error", "Only patients can book");
-        }}).build();
 
-        Patient patient = (Patient) user;
-        Dentiste dentiste = (Dentiste) userDAO.findById(dto.getDentistId());
-        if(dentiste == null) return Response.status(Response.Status.BAD_REQUEST).entity(new java.util.HashMap<String, Object>() {{
-            put("error", "Dentist not found");
-        }}).build();
-        
-        ServiceMedical service = null;
-        if(dto.getServiceId() != null) {
-             service = serviceDAO.findById(dto.getServiceId());
+        if (!(user instanceof Dentiste)) {
+            return Response.status(Response.Status.FORBIDDEN).entity("Seul le dentiste peut créer un créneau de rendez-vous").build();
+        }
+
+        // Vérification des champs obligatoires
+        if(dto.getDateRv() == null || dto.getHeureRv() == null) {
+             return Response.status(Response.Status.BAD_REQUEST).entity("Date et Heure sont obligatoires").build();
         }
 
         Rendezvous rv = new Rendezvous();
-        rv.setPatient(patient);
-        rv.setDentiste(dentiste);
-        // rv.setServiceMedical(service); // Removed
         rv.setDateRv(dto.getDateRv());
         rv.setHeureRv(dto.getHeureRv());
-        rv.setDescriptionRv(dto.getDescriptionRv());
-        rv.setStatutRv("PENDING"); 
+        rv.setDescriptionRv(dto.getDescriptionRv()); // Facultatif
 
+        rv.setPatient(null);
+        rv.setDentiste((Dentiste) user);
+        rv.setStatutRv(StatutRendezvous.DISPONIBLE);
+        
         rvDAO.addRendezvous(rv);
         
-        // Create ActeMedical if service was selected
-        if(service != null) {
-            ActeMedical acte = new ActeMedical();
-            acte.setRendezvous(rv);
-            acte.setServiceMedical(service);
-            acte.setDescriptionAM(dto.getDescriptionRv()); 
-            acte.setTarifAM(service.getTarifSM()); // Use current service price as default
-            acteDAO.addActe(acte);
-        }
-        
         return Response.ok(new java.util.HashMap<String, Object>() {{
-            put("message", "Rendezvous booked successfully");
+            put("message", "Créneau de rendez-vous ajouté avec succès");
             put("id", rv.getIdRv());
         }}).build();
     }
@@ -128,16 +116,23 @@ public class RendezvousRest {
         
         if(rv.getDentiste().getId() != user.getId()) return Response.status(Response.Status.FORBIDDEN).build();
 
-        if("VALIDATED".equalsIgnoreCase(status) || "REFUSED".equalsIgnoreCase(status)) {
-            rv.setStatutRv(status.toUpperCase());
-            rvDAO.updateRendezvous(rv);
-            return Response.ok(new java.util.HashMap<String, Object>() {{
-                put("message", "Status updated");
-                put("status", status.toUpperCase());
-            }}).build();
+        if("VALIDATED".equalsIgnoreCase(status)) {
+            // Confirmation : reste NON_DISPONIBLE
+            rv.setStatutRv(StatutRendezvous.NON_DISPONIBLE);
+        } else if ("REFUSED".equalsIgnoreCase(status)) {
+            // Refus : Libère le créneau
+            rv.setStatutRv(StatutRendezvous.DISPONIBLE);
+            rv.setPatient(null);
+        } else {
+             return Response.status(Response.Status.BAD_REQUEST).entity(new java.util.HashMap<String, Object>() {{
+                put("error", "Invalid status");
+             }}).build();
         }
-        return Response.status(Response.Status.BAD_REQUEST).entity(new java.util.HashMap<String, Object>() {{
-            put("error", "Invalid status");
+        
+        rvDAO.updateRendezvous(rv);
+        return Response.ok(new java.util.HashMap<String, Object>() {{
+            put("message", "Status updated");
+            put("status", rv.getStatutRv().name());
         }}).build();
     }
     
@@ -153,26 +148,49 @@ public class RendezvousRest {
         if(rv == null) return Response.status(Response.Status.NOT_FOUND).build();
         if(rv.getPatient().getId() != user.getId()) return Response.status(Response.Status.FORBIDDEN).build();
 
-        if(!"PENDING".equalsIgnoreCase(rv.getStatutRv())) {
-            return Response.status(Response.Status.BAD_REQUEST).entity(new java.util.HashMap<String, Object>() {{
-                put("error", "Cannot modify validated/refused rendezvous");
-            }}).build();
-        }
+        // Le patient peut modifier son RDV
         
         // Update fields if provided
         if(dto.getDateRv() != null) rv.setDateRv(dto.getDateRv());
         if(dto.getHeureRv() != null) rv.setHeureRv(dto.getHeureRv());
         if(dto.getDescriptionRv() != null) rv.setDescriptionRv(dto.getDescriptionRv());
-        // Can cancel by setting status? Prompt says "cancel or modify".
-        // Let's assume cancel is via a status update or DELETE. But prompt says "cancel... if not validated".
+        
+        // Annulation par le patient -> Libère le créneau
         if(dto.getStatutRv() != null && "CANCELLED".equalsIgnoreCase(dto.getStatutRv())) {
-             rv.setStatutRv("CANCELLED");
+             rv.setStatutRv(StatutRendezvous.DISPONIBLE);
+             rv.setPatient(null);
         }
 
         rvDAO.updateRendezvous(rv);
         return Response.ok(new java.util.HashMap<String, Object>() {{
             put("message", "Rendezvous updated");
             put("id", rv.getIdRv());
+        }}).build();
+    }
+
+    @DELETE
+    @Path("/{id}")
+    public Response deleteRendezvous(@PathParam("id") int id, @Context HttpServletRequest req) {
+        HttpSession session = req.getSession(false);
+        if (session == null || session.getAttribute("user") == null) return Response.status(Response.Status.UNAUTHORIZED).build();
+        User user = (User) session.getAttribute("user");
+
+        Rendezvous rv = rvDAO.findById(id);
+        if (rv == null) return Response.status(Response.Status.NOT_FOUND).build();
+
+        // Le patient ou le dentiste concerné peuvent supprimer, MAIS PAS l'Admin
+        boolean isPatientOwner = (user instanceof Patient) && (rv.getPatient().getId() == user.getId());
+        boolean isDentistOwner = (user instanceof Dentiste) && (rv.getDentiste().getId() == user.getId());
+
+        if (!isPatientOwner && !isDentistOwner) {
+            return Response.status(Response.Status.FORBIDDEN).entity(new java.util.HashMap<String, Object>() {{
+                put("error", "Only the patient or dentist involved can delete this appointment");
+            }}).build();
+        }
+
+        rvDAO.deleteRendezvous(id);
+        return Response.ok(new java.util.HashMap<String, Object>() {{
+            put("message", "Rendezvous supprimé");
         }}).build();
     }
 }
