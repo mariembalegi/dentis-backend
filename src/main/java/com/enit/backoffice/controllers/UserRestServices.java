@@ -13,6 +13,11 @@ import com.enit.backoffice.dto.LoginAdminResponseDTO;
 import com.enit.backoffice.dto.LoginDentisteResponseDTO;
 import com.enit.backoffice.dto.LoginPatientResponseDTO;
 import com.enit.backoffice.dto.LoginUserResponseDTO;
+import com.enit.backoffice.dto.DentisteSearchDTO;
+// import com.enit.backoffice.dto.DentisteDetailsDTO;
+import com.enit.backoffice.dto.ServiceMedicalDTO;
+import com.enit.backoffice.dto.RendezvousDTO;
+import com.enit.backoffice.dto.HoraireDTO;
 import com.enit.backoffice.dao.IUserDAO; // Modified import
 import com.enit.backoffice.dto.SignupPatientRequestDTO;
 import com.enit.backoffice.dto.SignupDentisteRequestDTO;
@@ -21,6 +26,10 @@ import com.enit.backoffice.entity.Patient;
 import com.enit.backoffice.entity.Admin;
 import com.enit.backoffice.entity.User;
 
+import com.enit.backoffice.entity.ServiceMedical;
+import com.enit.backoffice.entity.Rendezvous;
+import com.enit.backoffice.entity.Horaire;
+import com.enit.backoffice.entity.JourSemaine;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.ws.rs.core.Context;
@@ -31,15 +40,42 @@ import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 
 
+import java.time.format.DateTimeFormatter;
+import java.time.LocalTime;
+
 @Stateless
 @Path("/userREST")
 public class UserRestServices {
+	
+	private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
+
+	private LocalTime parseTime(String timeStr) {
+		if (timeStr == null || timeStr.trim().isEmpty()) {
+			return null;
+		}
+		try {
+            // Support "HH:mm:ss" coming from DB or "HH:mm" from some inputs
+            if (timeStr.length() > 5) {
+               return LocalTime.parse(timeStr.substring(0, 5));
+            }
+			return LocalTime.parse(timeStr, TIME_FORMATTER);
+		} catch (Exception e) {
+			return null; // Handle parse error safely
+		}
+	}
+    
+    private String formatTime(LocalTime time) {
+        if (time == null) return null;
+        return time.format(TIME_FORMATTER);
+    }
 	
 	@EJB
 	IUserDAO userDAO;
@@ -239,5 +275,166 @@ public class UserRestServices {
       @Produces(MediaType.APPLICATION_JSON)
       public Response getAllPatients() {
     	  return Response.ok(userDAO.getAllPatients()).build();
+      }
+
+      @GET
+      @Path("/search")
+      @Produces(MediaType.APPLICATION_JSON)
+      public Response searchDentists(@QueryParam("keyword") String keyword, 
+                                     @QueryParam("gouvernorat") String gouvernorat) {
+          
+          java.util.List<Dentiste> dentistes = userDAO.searchDentists(keyword, gouvernorat);
+          java.util.List<DentisteSearchDTO> dtos = new java.util.ArrayList<>();
+          
+          for (Dentiste d : dentistes) {
+              DentisteSearchDTO dto = new DentisteSearchDTO(
+                  d.getId(), d.getNom(), d.getPrenom(), d.getGouvernorat(), 
+                  d.getDelegation(), d.getAdresse(), d.getDiplome(), d.getSpecialite()
+              );
+              dto.setPhoto(d.getPhoto());
+              dtos.add(dto);
+          }
+          return Response.ok(dtos).build();
+      }
+
+      @GET
+      @Path("/dentist/{id}")
+      @Produces(MediaType.APPLICATION_JSON)
+      public Response getDentistDetails(@PathParam("id") int id) {
+          User user = userDAO.findById(id);
+          if (user == null || !(user instanceof Dentiste)) {
+              return Response.status(Response.Status.NOT_FOUND).entity("Dentist not found").build();
+          }
+          
+          Dentiste d = (Dentiste) user;
+          
+          // Use Map to avoid compilation issues with new DTO class
+          java.util.Map<String, Object> responseMap = new java.util.HashMap<>();
+          
+          // Basic Dentist Info
+          responseMap.put("id", d.getId());
+          responseMap.put("nom", d.getNom());
+          responseMap.put("prenom", d.getPrenom());
+          responseMap.put("gouvernorat", d.getGouvernorat());
+          responseMap.put("delegation", d.getDelegation());
+          responseMap.put("adresse", d.getAdresse());
+          responseMap.put("diplome", d.getDiplome());
+          responseMap.put("specialite", d.getSpecialite());
+          responseMap.put("tel", d.getTel());
+          responseMap.put("photo", d.getPhoto());
+          
+          // Fetch Services
+          java.util.List<ServiceMedical> services = userDAO.getDentistServices(id);
+          java.util.List<ServiceMedicalDTO> serviceDTOs = new java.util.ArrayList<>();
+          for (ServiceMedical s : services) {
+              ServiceMedicalDTO sDto = new ServiceMedicalDTO();
+              sDto.setNumSM(s.getNumSM());
+              sDto.setNomSM(s.getNomSM());
+              sDto.setTypeSM(s.getTypeSM() != null ? s.getTypeSM().toString() : null);
+              sDto.setDescriptionSM(s.getDescriptionSM());
+              sDto.setTarifSM(s.getTarifSM());
+              sDto.setDentistId(d.getId());
+              serviceDTOs.add(sDto);
+          }
+          responseMap.put("services", serviceDTOs);
+          
+          // Fetch Available Rendezvous
+          java.util.List<Rendezvous> rendezvousList = userDAO.getAvailableRendezvous(id);
+          java.util.List<RendezvousDTO> rvDTOs = new java.util.ArrayList<>();
+          for (Rendezvous r : rendezvousList) {
+              RendezvousDTO rvDto = new RendezvousDTO();
+              rvDto.setIdRv(r.getIdRv());
+              rvDto.setDentistId(d.getId());
+              rvDto.setDateRv(r.getDateRv());
+              rvDto.setHeureRv(r.getHeureRv());
+              rvDto.setStatutRv(r.getStatutRv().toString());
+              rvDto.setDescriptionRv(r.getDescriptionRv());
+              rvDto.setDentistName(d.getNom() + " " + d.getPrenom());
+              
+              rvDTOs.add(rvDto);
+          }
+          responseMap.put("availableRendezvous", rvDTOs);
+          
+          return Response.ok(responseMap).build();
+      }
+
+      @PUT
+      @Path("/dentist/{id}")
+      @Consumes(MediaType.APPLICATION_JSON)
+      @Produces(MediaType.APPLICATION_JSON)
+      public Response updateDentistProfile(@PathParam("id") int id, DentisteSearchDTO dto) {
+          User user = userDAO.findById(id);
+          if (user == null || !(user instanceof Dentiste)) {
+              return Response.status(Response.Status.NOT_FOUND).entity("Dentist not found").build();
+          }
+
+          Dentiste d = (Dentiste) user;
+          // Update allowed fields
+          if (dto.getNom() != null) d.setNom(dto.getNom());
+          if (dto.getPrenom() != null) d.setPrenom(dto.getPrenom());
+          if (dto.getGouvernorat() != null) d.setGouvernorat(dto.getGouvernorat());
+          if (dto.getDelegation() != null) d.setDelegation(dto.getDelegation());
+          if (dto.getAdresse() != null) d.setAdresse(dto.getAdresse());
+          if (dto.getDiplome() != null) d.setDiplome(dto.getDiplome());
+          if (dto.getSpecialite() != null) d.setSpecialite(dto.getSpecialite());
+          if (dto.getPhoto() != null) d.setPhoto(dto.getPhoto());
+          if (dto.getTel() != null) d.setTel(dto.getTel());
+
+          userDAO.updateDentist(d);
+
+          return Response.ok(new java.util.HashMap<String, Object>() {{
+              put("message", "Profile updated successfully");
+          }}).build();
+      }
+
+      @GET
+      @Path("/dentist/{id}/horaires")
+      @Produces(MediaType.APPLICATION_JSON)
+      public Response getDentistHoraires(@PathParam("id") int id) {
+          java.util.List<Horaire> horaires = userDAO.getDentistHoraires(id);
+          java.util.List<HoraireDTO> dtos = new java.util.ArrayList<>();
+          
+          for (Horaire h : horaires) {
+              HoraireDTO dto = new HoraireDTO();
+              dto.setJourSemaine(h.getJourSemaine().toString());
+              dto.setMatinDebut(formatTime(h.getMatinDebut()));
+              dto.setMatinFin(formatTime(h.getMatinFin()));
+              dto.setApresMidiDebut(formatTime(h.getApresMidiDebut()));
+              dto.setApresMidiFin(formatTime(h.getApresMidiFin()));
+              dto.setEstFerme(h.isEstFerme());
+              dtos.add(dto);
+          }
+           return Response.ok(dtos).build();
+      }
+
+      @PUT
+      @Path("/dentist/{id}/horaires")
+      @Consumes(MediaType.APPLICATION_JSON)
+      @Produces(MediaType.APPLICATION_JSON)
+      public Response updateDentistHoraires(@PathParam("id") int id, java.util.List<HoraireDTO> dtos) {
+          User user = userDAO.findById(id);
+          if (user == null || !(user instanceof Dentiste)) {
+              return Response.status(Response.Status.NOT_FOUND).entity("Dentist not found").build();
+          }
+
+          java.util.List<Horaire> horaires = new java.util.ArrayList<>();
+          for (HoraireDTO dto : dtos) {
+              Horaire h = new Horaire();
+              h.setJourSemaine(JourSemaine.valueOf(dto.getJourSemaine()));
+              
+              h.setMatinDebut(parseTime(dto.getMatinDebut()));
+              h.setMatinFin(parseTime(dto.getMatinFin()));
+              h.setApresMidiDebut(parseTime(dto.getApresMidiDebut()));
+              h.setApresMidiFin(parseTime(dto.getApresMidiFin()));
+              h.setEstFerme(dto.isEstFerme());
+
+              horaires.add(h);
+          }
+
+          userDAO.updateDentistHoraires(id, horaires);
+
+          return Response.ok(new java.util.HashMap<String, Object>() {{
+              put("message", "Horaires updated successfully");
+          }}).build();
       }
 }

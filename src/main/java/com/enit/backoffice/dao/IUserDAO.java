@@ -30,4 +30,13 @@ public interface IUserDAO {
     public java.util.List<com.enit.backoffice.entity.Dentiste> searchDentists(String keyword, String location);
 
     public java.util.List<com.enit.backoffice.entity.Dentiste> findDentistsByName(String keyword);
+    
+    public java.util.List<com.enit.backoffice.entity.ServiceMedical> getDentistServices(int dentistId);
+    
+    public java.util.List<com.enit.backoffice.entity.Rendezvous> getAvailableRendezvous(int dentistId);
+    
+    // Manage Dentist Profile & Schedule
+    public void updateDentist(com.enit.backoffice.entity.Dentiste dentiste);
+    public java.util.List<com.enit.backoffice.entity.Horaire> getDentistHoraires(int dentistId);
+    public void updateDentistHoraires(int dentistId, java.util.List<com.enit.backoffice.entity.Horaire> horaires);
 }

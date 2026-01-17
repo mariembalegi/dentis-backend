@@ -75,7 +75,7 @@ public class UserDAOImpl implements IUserDAO {
                 queryStr.append(" AND s.typeSM IN (com.enit.backoffice.entity.TypeServiceMedical.ENDODONTIE, com.enit.backoffice.entity.TypeServiceMedical.ESTHETIQUE_DENTAIRE, com.enit.backoffice.entity.TypeServiceMedical.IMPLANTOLOGIE)");
                 standardSearch = false;
             } else {
-                queryStr.append(" AND (LOWER(d.nom) LIKE :keyword OR LOWER(d.prenom) LIKE :keyword OR LOWER(s.typeSM) LIKE :keyword)");
+                queryStr.append(" AND (LOWER(d.nom) LIKE :keyword OR LOWER(d.prenom) LIKE :keyword OR LOWER(s.nomSM) LIKE :keyword OR LOWER(s.typeSM) LIKE :keyword)");
             }
         }
         
@@ -102,5 +102,49 @@ public class UserDAOImpl implements IUserDAO {
                  .setParameter("keyword", "%" + keyword.toLowerCase() + "%")
                  .setMaxResults(5)
                  .getResultList();
+    }
+
+    @Override
+    public java.util.List<com.enit.backoffice.entity.ServiceMedical> getDentistServices(int dentistId) {
+        return em.createQuery("SELECT s FROM ServiceMedical s WHERE s.dentiste.id = :id", com.enit.backoffice.entity.ServiceMedical.class)
+                 .setParameter("id", dentistId)
+                 .getResultList();
+    }
+
+    @Override
+    public java.util.List<com.enit.backoffice.entity.Rendezvous> getAvailableRendezvous(int dentistId) {
+        return em.createQuery("SELECT r FROM Rendezvous r WHERE r.dentiste.id = :id AND r.statutRv = :status", com.enit.backoffice.entity.Rendezvous.class)
+                 .setParameter("id", dentistId)
+                 .setParameter("status", com.enit.backoffice.entity.StatutRendezvous.DISPONIBLE)
+                 .getResultList();
+    }
+
+    @Override
+    public void updateDentist(com.enit.backoffice.entity.Dentiste dentiste) {
+        em.merge(dentiste);
+    }
+
+    @Override
+    public java.util.List<com.enit.backoffice.entity.Horaire> getDentistHoraires(int dentistId) {
+        return em.createQuery("SELECT h FROM Horaire h WHERE h.dentiste.id = :id ORDER BY h.jourSemaine", com.enit.backoffice.entity.Horaire.class)
+                 .setParameter("id", dentistId)
+                 .getResultList();
+    }
+
+    @Override
+    public void updateDentistHoraires(int dentistId, java.util.List<com.enit.backoffice.entity.Horaire> horaires) {
+        // First delete existing schedules to avoid duplicates/conflicts or complex merge logic
+        em.createQuery("DELETE FROM Horaire h WHERE h.dentiste.id = :id")
+          .setParameter("id", dentistId)
+          .executeUpdate();
+          
+        // Re-insert new schedules
+        com.enit.backoffice.entity.Dentiste d = em.find(com.enit.backoffice.entity.Dentiste.class, dentistId);
+        if (d != null) {
+            for (com.enit.backoffice.entity.Horaire h : horaires) {
+                h.setDentiste(d); // Ensure relationship is set
+                em.persist(h);
+            }
+        }
     }
 }

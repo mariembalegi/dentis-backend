@@ -94,26 +94,6 @@ public class DataInitializer {
         Dentiste d1 = (Dentiste) userDAO.findByEmail("ali.bensalah@dentis.com");
         Dentiste d2 = (Dentiste) userDAO.findByEmail("mariem.mansour@dentis.com");
         
-        // Rendezvous for P1 with D1
-        Rendezvous rv1 = createRendezvous(p1, d1, LocalDate.now().plusDays(2), LocalTime.of(10, 0), "CONFIRME", "Consultation de suivi");
-        
-        // We usually link Acte to Rendezvous and Service. 
-        // Need to find services of D1. 
-        /* Services removed from initialization
-        List<ServiceMedical> d1Services = serviceMedicalDAO.findByDentistId(d1.getId());
-        if (!d1Services.isEmpty()) {
-             createActe(rv1, d1Services.get(0), "Suivi mensuel", 50.0);
-        }
-        */
-
-        // Rendezvous for P2 with D2
-        Rendezvous rv2 = createRendezvous(p2, d2, LocalDate.now().minusDays(1), LocalTime.of(14, 30), "TERMINE", "Douleur dent 46");
-        /* Services removed from initialization
-        List<ServiceMedical> d2Services = serviceMedicalDAO.findByDentistId(d2.getId());
-        if (!d2Services.isEmpty()) {
-             createActe(rv2, d2Services.get(1), "Extraction dent 46", 70.0);
-        }
-        */
     }
 
 
@@ -159,17 +139,9 @@ public class DataInitializer {
         return (Patient) userDAO.findByEmail(email);
     }
 
-    private Rendezvous createRendezvous(Patient p, Dentiste d, LocalDate date, LocalTime time, String status, String desc) {
-        Rendezvous rv = new Rendezvous();
-        rv.setPatient(p);
-        rv.setDentiste(d);
-        rv.setDateRv(date);
-        rv.setHeureRv(time);
-        rv.setStatutRv(status);
-        rv.setDescriptionRv(desc);
-        rendezvousDAO.addRendezvous(rv);
-        // assuming addRendezvous persists and updates ID or we just return it
-        return rv; 
+    private Rendezvous createRendezvous(Patient p, Dentiste d, LocalDate date, LocalTime time, StatutRendezvous status, String desc) {
+        // Disabled
+        return null;
     }
 
     private void createActe(Rendezvous rv, ServiceMedical sm, String desc, double tarif) {

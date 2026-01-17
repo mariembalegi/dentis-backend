@@ -10,6 +10,7 @@ public class DentisteSearchDTO {
     private String photo; // Optional, for the avatar
     private String diplome;
     private String specialite;
+    private Integer tel;
 
     public DentisteSearchDTO(int id, String nom, String prenom, String gouvernorat, String delegation, String adresse, String diplome, String specialite) {
         this.id = id;
@@ -47,4 +48,7 @@ public class DentisteSearchDTO {
     
     public String getSpecialite() { return specialite; }
     public void setSpecialite(String specialite) { this.specialite = specialite; }
+
+    public Integer getTel() { return tel; }
+    public void setTel(Integer tel) { this.tel = tel; }
 }

@@ -7,9 +7,14 @@ import com.enit.backoffice.dao.IActeMedicalDAO; // New import
 import com.enit.backoffice.dto.RendezvousDTO;
 import com.enit.backoffice.entity.*;
 
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+import java.nio.charset.StandardCharsets;
+
 import jakarta.ejb.EJB;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
@@ -26,6 +31,39 @@ public class RendezvousRest {
     @EJB IUserDAO userDAO;
     @EJB IServiceMedicalDAO serviceDAO;
     @EJB IActeMedicalDAO acteDAO; // New EJB
+
+    private User getAuthenticatedUser(HttpServletRequest req) {
+        // 1. Try Session
+        HttpSession session = req.getSession(false);
+        if (session != null && session.getAttribute("user") != null) {
+            return (User) session.getAttribute("user");
+        }
+
+        // 2. Try JWT
+        String authHeader = req.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            try {
+                java.security.Key key = Keys.hmacShaKeyFor("MaCleSuperSecrete1234567890123456".getBytes(StandardCharsets.UTF_8));
+                
+                // Parser for JJWT 0.11+ (matches UserRestServices builder)
+                io.jsonwebtoken.Claims claims = Jwts.parserBuilder()
+                        .setSigningKey(key)
+                        .build()
+                        .parseClaimsJws(token)
+                        .getBody();
+                
+                String email = claims.getSubject();
+                if (email != null) {
+                    return userDAO.findByEmail(email);
+                }
+            } catch (Exception e) {
+                // Token invalid or expired
+                System.out.println("JWT Warning: " + e.getMessage());
+            }
+        }
+        return null;
+    }
 
     private RendezvousDTO mapToDTO(Rendezvous r) {
         RendezvousDTO dto = new RendezvousDTO();
@@ -51,11 +89,45 @@ public class RendezvousRest {
     }
 
     @POST
+    @Path("/book")
+    public Response bookRendezvous(RendezvousDTO dto, @Context HttpServletRequest req) {
+        // Find the patient
+        User patient = userDAO.findById(dto.getPatientId());
+        if (patient == null || !(patient instanceof Patient)) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(new java.util.HashMap<String, Object>() {{
+                put("error", "Patient not found");
+            }}).build();
+        }
+
+        // Find the available slot
+        Rendezvous rv = rvDAO.findAvailableSlot(dto.getDentistId(), dto.getDateRv(), dto.getHeureRv());
+        
+        if (rv == null) {
+            return Response.status(Response.Status.NOT_FOUND).entity(new java.util.HashMap<String, Object>() {{
+                put("error", "No available slot found for the selected date and time");
+            }}).build();
+        }
+
+        // Book the slot
+        rv.setPatient((Patient) patient);
+        rv.setStatutRv(StatutRendezvous.NON_DISPONIBLE);
+        if (dto.getDescriptionRv() != null) {
+            rv.setDescriptionRv(dto.getDescriptionRv());
+        }
+
+        rvDAO.updateRendezvous(rv);
+
+        return Response.ok(new java.util.HashMap<String, Object>() {{
+            put("message", "Rendez-vous réservé avec succès");
+            put("id", rv.getIdRv());
+        }}).build();
+    }
+
+    @POST
     @Path("/add")
     public Response addRendezvous(RendezvousDTO dto, @Context HttpServletRequest req) {
-        HttpSession session = req.getSession(false);
-        if (session == null || session.getAttribute("user") == null) return Response.status(Response.Status.UNAUTHORIZED).build();
-        User user = (User) session.getAttribute("user");
+        User user = getAuthenticatedUser(req);
+        if (user == null) return Response.status(Response.Status.UNAUTHORIZED).build();
 
         if (!(user instanceof Dentiste)) {
             return Response.status(Response.Status.FORBIDDEN).entity("Seul le dentiste peut créer un créneau de rendez-vous").build();
@@ -85,10 +157,10 @@ public class RendezvousRest {
 
     @GET
     @Path("/my")
+    @Transactional
     public Response getMyRendezvous(@Context HttpServletRequest req) {
-        HttpSession session = req.getSession(false);
-        if (session == null || session.getAttribute("user") == null) return Response.status(Response.Status.UNAUTHORIZED).build();
-        User user = (User) session.getAttribute("user");
+        User user = getAuthenticatedUser(req);
+        if (user == null) return Response.status(Response.Status.UNAUTHORIZED).build();
 
         List<Rendezvous> rvs;
         if (user instanceof Dentiste) {
@@ -105,9 +177,8 @@ public class RendezvousRest {
     @PUT
     @Path("/{id}/validate")
     public Response validateRendezvous(@PathParam("id") Integer id, @QueryParam("status") String status, @Context HttpServletRequest req) {
-        HttpSession session = req.getSession(false);
-        if (session == null || session.getAttribute("user") == null) return Response.status(Response.Status.UNAUTHORIZED).build();
-        User user = (User) session.getAttribute("user");
+        User user = getAuthenticatedUser(req);
+        if (user == null) return Response.status(Response.Status.UNAUTHORIZED).build();
 
         if (!(user instanceof Dentiste)) return Response.status(Response.Status.FORBIDDEN).build();
         
@@ -139,9 +210,8 @@ public class RendezvousRest {
     @PUT
     @Path("/{id}/cancel") // Or modify
     public Response updateRendezvousByPatient(@PathParam("id") Integer id, RendezvousDTO dto, @Context HttpServletRequest req) {
-        HttpSession session = req.getSession(false);
-        if (session == null || session.getAttribute("user") == null) return Response.status(Response.Status.UNAUTHORIZED).build();
-        User user = (User) session.getAttribute("user");
+        User user = getAuthenticatedUser(req);
+        if (user == null) return Response.status(Response.Status.UNAUTHORIZED).build();
         if (!(user instanceof Patient)) return Response.status(Response.Status.FORBIDDEN).build();
 
         Rendezvous rv = rvDAO.findById(id);
@@ -171,9 +241,8 @@ public class RendezvousRest {
     @DELETE
     @Path("/{id}")
     public Response deleteRendezvous(@PathParam("id") int id, @Context HttpServletRequest req) {
-        HttpSession session = req.getSession(false);
-        if (session == null || session.getAttribute("user") == null) return Response.status(Response.Status.UNAUTHORIZED).build();
-        User user = (User) session.getAttribute("user");
+        User user = getAuthenticatedUser(req);
+        if (user == null) return Response.status(Response.Status.UNAUTHORIZED).build();
 
         Rendezvous rv = rvDAO.findById(id);
         if (rv == null) return Response.status(Response.Status.NOT_FOUND).build();

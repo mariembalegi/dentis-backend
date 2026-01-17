@@ -41,7 +41,7 @@ public class ServiceMedicalRest {
         }
         return dto;
     }
-
+    
     @POST
     public Response addService(ServiceMedicalDTO dto, @Context HttpServletRequest req) {
         HttpSession session = req.getSession(false);
@@ -73,6 +73,29 @@ public class ServiceMedicalRest {
             put("message", "Service added successfully");
             put("id", service.getNumSM());
         }}).build();
+    }
+
+    @GET
+    @Path("/{id}")
+    public Response getServiceById(@PathParam("id") Integer id, @Context HttpServletRequest req) {
+        HttpSession session = req.getSession(false);
+        if (session == null || session.getAttribute("user") == null) return Response.status(Response.Status.UNAUTHORIZED).build();
+
+        User user = (User) session.getAttribute("user");
+        if (!(user instanceof Dentiste)) {
+            return Response.status(Response.Status.FORBIDDEN).entity(new java.util.HashMap<String, Object>() {{
+                put("error", "Access restricted to connected dentists");
+            }}).build();
+        }
+
+        ServiceMedical service = serviceDAO.findById(id);
+        if (service == null) return Response.status(Response.Status.NOT_FOUND).build();
+
+        if (service.getDentiste().getId() != user.getId()) {
+             return Response.status(Response.Status.FORBIDDEN).build();
+        }
+        
+        return Response.ok(mapToDTO(service)).build();
     }
 
     @PUT

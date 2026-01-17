@@ -10,4 +10,5 @@ public interface IRendezvousDAO {
     Rendezvous findById(Integer id);
     List<Rendezvous> findByDentistId(int dentistId);
     List<Rendezvous> findByPatientId(int patientId);
+    Rendezvous findAvailableSlot(int dentistId, java.time.LocalDate date, java.time.LocalTime time);
 }

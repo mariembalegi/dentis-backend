@@ -36,15 +36,28 @@ public class RendezvousDAOImpl implements IRendezvousDAO {
 
     @Override
     public List<Rendezvous> findByDentistId(int dentistId) {
-        return em.createQuery("SELECT r FROM Rendezvous r WHERE r.dentiste.id = :id", Rendezvous.class)
+        return em.createQuery("SELECT DISTINCT r FROM Rendezvous r LEFT JOIN FETCH r.actes WHERE r.dentiste.id = :id", Rendezvous.class)
                  .setParameter("id", dentistId)
                  .getResultList();
     }
 
     @Override
     public List<Rendezvous> findByPatientId(int patientId) {
-        return em.createQuery("SELECT r FROM Rendezvous r WHERE r.patient.id = :id", Rendezvous.class)
+        return em.createQuery("SELECT DISTINCT r FROM Rendezvous r LEFT JOIN FETCH r.actes WHERE r.patient.id = :id", Rendezvous.class)
                  .setParameter("id", patientId)
                  .getResultList();
+    }
+
+    @Override
+    public Rendezvous findAvailableSlot(int dentistId, java.time.LocalDate date, java.time.LocalTime time) {
+        List<Rendezvous> results = em.createQuery(
+            "SELECT r FROM Rendezvous r WHERE r.dentiste.id = :dentistId AND r.dateRv = :date AND r.heureRv = :time AND r.statutRv = :status", Rendezvous.class)
+            .setParameter("dentistId", dentistId)
+            .setParameter("date", date)
+            .setParameter("time", time)
+            .setParameter("status", com.enit.backoffice.entity.StatutRendezvous.DISPONIBLE)
+            .setMaxResults(1)
+            .getResultList();
+        return results.isEmpty() ? null : results.get(0);
     }
 }
