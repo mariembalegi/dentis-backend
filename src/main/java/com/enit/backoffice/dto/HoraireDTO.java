@@ -4,7 +4,8 @@ import java.io.Serializable;
 import java.time.LocalTime;
 
 public class HoraireDTO implements Serializable {
-    private String jourSemaine;
+	private static final long serialVersionUID = 1L;
+	private String jourSemaine;
     private LocalTime matinDebut;
     private LocalTime matinFin;
     private LocalTime apresMidiDebut;
