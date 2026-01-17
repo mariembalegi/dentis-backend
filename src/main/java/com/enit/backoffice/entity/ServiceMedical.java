@@ -1,10 +1,13 @@
 package com.enit.backoffice.entity;
 import jakarta.persistence.*;
+import java.io.Serializable;
 import java.math.BigDecimal;
 
 @Entity
 @Table(name = "service_medical")
-public class ServiceMedical {
+public class ServiceMedical implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
 	@Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -14,7 +17,8 @@ public class ServiceMedical {
     private String nomSM;
 
     @Column(nullable = false, length = 100)
-    private String typeSM;
+    @Enumerated(EnumType.STRING)
+    private TypeServiceMedical typeSM;
 
     @Column(columnDefinition = "TEXT")
     private String descriptionSM;
@@ -42,7 +46,7 @@ public class ServiceMedical {
         return nomSM;
     }
 
-    public String getTypeSM() {
+    public TypeServiceMedical getTypeSM() {
         return typeSM;
     }
 
@@ -64,7 +68,7 @@ public class ServiceMedical {
         this.nomSM = nomSM;
     }
 
-    public void setTypeSM(String typeSM) {
+    public void setTypeSM(TypeServiceMedical typeSM) {
         this.typeSM = typeSM;
     }
 

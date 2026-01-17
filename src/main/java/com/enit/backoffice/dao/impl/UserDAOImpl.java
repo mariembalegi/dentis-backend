@@ -69,10 +69,10 @@ public class UserDAOImpl implements IUserDAO {
         if (keyword != null && !keyword.trim().isEmpty()) {
             String k = keyword.trim().toLowerCase();
             if (k.contains("dentisterie générale") || k.contains("dentisterie generale")) {
-                queryStr.append(" AND s.typeSM IN ('Diagnostic et soins courants', 'Parodontologie', 'Radiologie et imagerie dentaire')");
+                queryStr.append(" AND s.typeSM IN (com.enit.backoffice.entity.TypeServiceMedical.DIAGNOSTIC_SOINS_COURANTS, com.enit.backoffice.entity.TypeServiceMedical.PARODONTOLOGIE, com.enit.backoffice.entity.TypeServiceMedical.RADIOLOGIE_IMAGERIE)");
                 standardSearch = false;
             } else if (k.contains("actes chirurgicaux")) {
-                queryStr.append(" AND s.typeSM IN ('Endodontie', 'Esthétique dentaire', 'Implantologie')");
+                queryStr.append(" AND s.typeSM IN (com.enit.backoffice.entity.TypeServiceMedical.ENDODONTIE, com.enit.backoffice.entity.TypeServiceMedical.ESTHETIQUE_DENTAIRE, com.enit.backoffice.entity.TypeServiceMedical.IMPLANTOLOGIE)");
                 standardSearch = false;
             } else {
                 queryStr.append(" AND (LOWER(d.nom) LIKE :keyword OR LOWER(d.prenom) LIKE :keyword OR LOWER(s.typeSM) LIKE :keyword)");
@@ -80,7 +80,7 @@ public class UserDAOImpl implements IUserDAO {
         }
         
         if (location != null && !location.trim().isEmpty()) {
-            queryStr.append(" AND LOWER(d.ville) LIKE :location");
+            queryStr.append(" AND (LOWER(d.gouvernorat) LIKE :location OR LOWER(d.delegation) LIKE :location OR LOWER(d.adresse) LIKE :location)");
         }
         
         jakarta.persistence.TypedQuery<com.enit.backoffice.entity.Dentiste> query = em.createQuery(queryStr.toString(), com.enit.backoffice.entity.Dentiste.class);
@@ -94,5 +94,13 @@ public class UserDAOImpl implements IUserDAO {
         }
         
         return query.getResultList();
+    }
+
+    @Override
+    public java.util.List<com.enit.backoffice.entity.Dentiste> findDentistsByName(String keyword) {
+        return em.createQuery("SELECT d FROM Dentiste d WHERE LOWER(d.nom) LIKE :keyword OR LOWER(d.prenom) LIKE :keyword", com.enit.backoffice.entity.Dentiste.class)
+                 .setParameter("keyword", "%" + keyword.toLowerCase() + "%")
+                 .setMaxResults(5)
+                 .getResultList();
     }
 }

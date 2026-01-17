@@ -10,7 +10,10 @@ public class SignupDentisteRequestDTO {
     private String photo;
     
     private String diplome;
-    private String ville;
+    private String specialite;
+    private String gouvernorat;
+    private String delegation;
+    private String adresse;
 
     public String getNom() { return nom; }
     public void setNom(String nom) { this.nom = nom; }
@@ -28,6 +31,16 @@ public class SignupDentisteRequestDTO {
     public void setPhoto(String photo) { this.photo = photo; }
     public String getDiplome() { return diplome; }
     public void setDiplome(String diplome) { this.diplome = diplome; }
-    public String getVille() { return ville; }
-    public void setVille(String ville) { this.ville = ville; } 
+    
+    public String getSpecialite() { return specialite; }
+    public void setSpecialite(String specialite) { this.specialite = specialite; }
+
+    public String getGouvernorat() { return gouvernorat; }
+    public void setGouvernorat(String gouvernorat) { this.gouvernorat = gouvernorat; }
+    
+    public String getDelegation() { return delegation; }
+    public void setDelegation(String delegation) { this.delegation = delegation; }
+    
+    public String getAdresse() { return adresse; }
+    public void setAdresse(String adresse) { this.adresse = adresse; }
 }

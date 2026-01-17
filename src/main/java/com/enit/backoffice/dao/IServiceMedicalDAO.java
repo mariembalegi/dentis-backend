@@ -10,4 +10,5 @@ public interface IServiceMedicalDAO {
     ServiceMedical findById(Integer id);
     List<ServiceMedical> findAll();
     List<ServiceMedical> findByDentistId(int dentistId);
+    List<String> findServiceNamesLike(String keyword);
 }

@@ -28,8 +28,9 @@ public   class User implements Serializable {
     @Column(name = "tel")
     private int tel;
 
-    @Column(length = 1)
-    private String sexe; // M ou F
+    @Column(length = 10)
+    @Enumerated(EnumType.STRING)
+    private Sexe sexe; // M ou F
 
     @Column(length = 100)
     private String photo;
@@ -85,11 +86,11 @@ public   class User implements Serializable {
         this.tel = tel;
     }
 
-    public String getSexe() {
+    public Sexe getSexe() {
         return sexe;
     }
 
-    public void setSexe(String sexe) {
+    public void setSexe(Sexe sexe) {
         this.sexe = sexe;
     }
 

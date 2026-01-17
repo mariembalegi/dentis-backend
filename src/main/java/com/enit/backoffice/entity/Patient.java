@@ -14,11 +14,13 @@ public class Patient extends User {
     @Column(name = "dateNaissanceP")
     private LocalDate dateNaissanceP;
 
-    @Column(name = "groupeSanguinP", length = 2)
-    private String groupeSanguinP; 
+    @Column(name = "groupeSanguinP", length = 5)
+    @Enumerated(EnumType.STRING)
+    private GroupeSanguin groupeSanguinP; 
 
     @Column(name = "recouvrementP", length = 100)
-    private String recouvrementP;
+    @Enumerated(EnumType.STRING)
+    private TypeRecouvrement recouvrementP;
     
     @OneToMany(mappedBy = "patient", cascade = CascadeType.ALL,  orphanRemoval = true)
     private List<Rendezvous> rendezvous;
@@ -34,17 +36,17 @@ public class Patient extends User {
         this.dateNaissanceP = dateNaissanceP;
     }
 
-    public String getGroupeSanguinP() {
+    public GroupeSanguin getGroupeSanguinP() {
         return groupeSanguinP;
     }
-    public void setGroupeSanguinP(String groupeSanguinP) {
+    public void setGroupeSanguinP(GroupeSanguin groupeSanguinP) {
         this.groupeSanguinP = groupeSanguinP;
     }
 
-    public String getRecouvrementP() {
+    public TypeRecouvrement getRecouvrementP() {
         return recouvrementP;
     }
-    public void setRecouvrementP(String recouvrementP) {
+    public void setRecouvrementP(TypeRecouvrement recouvrementP) {
         this.recouvrementP = recouvrementP;
     }
     

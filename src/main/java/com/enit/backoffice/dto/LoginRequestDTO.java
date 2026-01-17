@@ -22,4 +22,9 @@ public class LoginRequestDTO {
     public void setMotDePasse(String motDePasse) {
         this.motDePasse = motDePasse;
     }
+    
+    // Allow "password" from frontend to map to "motDePasse"
+    public void setPassword(String password) {
+        this.motDePasse = password;
+    }
 }

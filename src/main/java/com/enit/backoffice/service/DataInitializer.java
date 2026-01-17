@@ -28,11 +28,19 @@ public class DataInitializer {
 
     @PostConstruct
     public void init() {
+        System.out.println("DataInitializer: Starting initialization...");
         try {
             if (!userDAO.existsByEmail("admin@dentis.com")) {
+                System.out.println("DataInitializer: creating default admin");
                 initAdmin();
                 initDentistesAndServices();
                 initPatientsAndRendezvous();
+            }
+            if (!userDAO.existsByEmail("meriem.balegi@etudiant-enit.utm.tn")) {
+                System.out.println("DataInitializer: creating Mariem admin");
+                initMariemAdmin();
+            } else {
+                 System.out.println("DataInitializer: Mariem admin already exists");
             }
         } catch (Exception e) {
             System.err.println("Error initializing data: " + e.getMessage());
@@ -40,33 +48,45 @@ public class DataInitializer {
         }
     }
 
+    private void initMariemAdmin() {
+        Admin admin = new Admin();
+        admin.setNom("Balegi");
+        admin.setPrenom("Mariem");
+        admin.setEmail("meriem.balegi@etudiant-enit.utm.tn");
+        admin.setMotDePasse("root");
+        admin.setTel(52072778);
+        admin.setSexe(Sexe.F);
+        admin.setAdminType("SUPER_ADMIN");
+        userDAO.addUser(admin);
+    }
+
     private void initAdmin() {
         Admin admin = new Admin();
         admin.setNom("Super");
         admin.setPrenom("Admin");
         admin.setEmail("admin@dentis.com");
-        admin.setMotDePasse(hashPwd("password123"));
+        admin.setMotDePasse("password123");
         admin.setTel(11111111);
-        admin.setSexe("M");
+        admin.setSexe(Sexe.M);
         admin.setAdminType("SUPER_ADMIN");
         userDAO.addUser(admin);
     }
 
     private void initDentistesAndServices() {
         // Dentiste 1 (Généraliste & Radio)
-        Dentiste d1 = createDentiste("Ben Salah", "Ali", "ali.bensalah@dentis.com", 22222222, "M", "Doctorat en Medecine Dentaire", "Tunis");
+        Dentiste d1 = createDentiste("Ben Salah", "Ali", "ali.bensalah@dentis.com", 22222222, Sexe.M, "Doctorat en Medecine Dentaire", "Omnipratique", "Tunis", "Tunis", "Av. Bourguiba");
         createService(d1, "Consultation Simple", "Diagnostic et soins courants", "Examen bucco-dentaire complet", 50.0);
         createService(d1, "Détartrage", "Diagnostic et soins courants", "Détartrage et polissage des deux arcades", 80.0);
         createService(d1, "Radio Panoramique", "Radiologie et imagerie dentaire", "Radiographie de l'ensemble de la mâchoire", 40.0);
 
         // Dentiste 2 (Endo & Esthétique)
-        Dentiste d2 = createDentiste("Mansour", "Mariem", "mariem.mansour@dentis.com", 33333333, "F", "Diplome d'Esthétique Dentaire", "Sousse");
+        Dentiste d2 = createDentiste("Mansour", "Mariem", "mariem.mansour@dentis.com", 33333333, Sexe.F, "Diplome d'Esthétique Dentaire", "Esthétique Dentaire", "Sousse", "Sousse Ville", "Rue de la Plage");
         createService(d2, "Traitement Canal", "Endodontie", "Dévitalisation et obturation canalaire", 150.0);
         createService(d2, "Blanchiment", "Esthétique dentaire", "Blanchiment dentaire au fauteuil", 400.0);
         createService(d2, "Facette Céramique", "Esthétique dentaire", "Pose de facette en céramique unitaire", 800.0);
 
         // Dentiste 3 (Paro & Implant)
-        Dentiste d3 = createDentiste("Tounsi", "Ahmed", "ahmed.tounsi@dentis.com", 44444444, "M", "Diplome Universitaire d'Implantologie", "Sfax");
+        Dentiste d3 = createDentiste("Tounsi", "Ahmed", "ahmed.tounsi@dentis.com", 44444444, Sexe.M, "Diplome Universitaire d'Implantologie", "Implantologie", "Sfax", "Sfax Ouest", "Route de l'Ain");
         createService(d3, "Surfaçage Radiculaire", "Parodontologie", "Nettoyage profond des racines", 200.0);
         createService(d3, "Implant Dentaire", "Implantologie", "Pose d'un implant titane + pilier", 1800.0);
         createService(d3, "Greffe Osseuse", "Implantologie", "Comblement osseux pré-implantaire", 600.0);
@@ -75,9 +95,9 @@ public class DataInitializer {
 
     private void initPatientsAndRendezvous() {
         // Patients
-        Patient p1 = createPatient("Trabelsi", "Sami", "sami.trabelsi@dentis.com", 55555555, "M", LocalDate.of(1990, 5, 20), "A+", "CNAM");
-        Patient p2 = createPatient("Jaziri", "Nour", "nour.jaziri@dentis.com", 66666666, "F", LocalDate.of(1985, 10, 15), "O+", "Assurance Groupe");
-        Patient p3 = createPatient("Kefi", "Ryma", "ryma.kefi@dentis.com", 77777777, "F", LocalDate.of(1998, 12, 30), "B-", "Aucun");
+        Patient p1 = createPatient("Trabelsi", "Sami", "sami.trabelsi@dentis.com", 55555555, Sexe.M, LocalDate.of(1990, 5, 20), GroupeSanguin.A, "CNAM");
+        Patient p2 = createPatient("Jaziri", "Nour", "nour.jaziri@dentis.com", 66666666, Sexe.F, LocalDate.of(1985, 10, 15), GroupeSanguin.O, "Assurance Groupe");
+        Patient p3 = createPatient("Kefi", "Ryma", "ryma.kefi@dentis.com", 77777777, Sexe.F, LocalDate.of(1998, 12, 30), GroupeSanguin.B, "Aucun");
 
         // Retrieve Dentists (assuming they are persisted and we can find them)
         Dentiste d1 = (Dentiste) userDAO.findByEmail("ali.bensalah@dentis.com");
@@ -104,34 +124,42 @@ public class DataInitializer {
 
     // --- Helper Methods ---
 
-    private Dentiste createDentiste(String nom, String prenom, String email, int tel, String sexe, String diplome, String ville) {
+    private Dentiste createDentiste(String nom, String prenom, String email, int tel, Sexe sexe, String diplome, String specialite, String gouvernorat, String delegation, String adresse) {
         Dentiste d = new Dentiste();
         d.setNom(nom);
         d.setPrenom(prenom);
         d.setEmail(email);
-        d.setMotDePasse(hashPwd("password123"));
+        d.setMotDePasse("password123");
         d.setTel(tel);
         d.setSexe(sexe);
         // Removed: d.setSpecialiteD(spec);
         d.setDiplome(diplome);
-        d.setVille(ville);
+        d.setSpecialite(specialite);
+        d.setGouvernorat(gouvernorat);
+        d.setDelegation(delegation);
+        d.setAdresse(adresse);
+        d.setVerifie(true);
         userDAO.addUser(d);
         // creating a new object from DB to ensure it's managed if needed, 
         // but simplest is just ensuring addUser persists it.
         return (Dentiste) userDAO.findByEmail(email); 
     }
 
-    private Patient createPatient(String nom, String prenom, String email, int tel, String sexe, LocalDate dob, String blood, String insurance) {
+    private Patient createPatient(String nom, String prenom, String email, int tel, Sexe sexe, LocalDate dob, GroupeSanguin blood, String insurance) {
         Patient p = new Patient();
         p.setNom(nom);
         p.setPrenom(prenom);
         p.setEmail(email);
-        p.setMotDePasse(hashPwd("password123"));
+        p.setMotDePasse("password123");
         p.setTel(tel);
         p.setSexe(sexe);
         p.setDateNaissanceP(dob);
         p.setGroupeSanguinP(blood);
-        p.setRecouvrementP(insurance);
+        if (insurance != null) {
+            try {
+                p.setRecouvrementP(com.enit.backoffice.entity.TypeRecouvrement.fromLabel(insurance));
+            } catch (Exception e) {}
+        }
         userDAO.addUser(p);
         return (Patient) userDAO.findByEmail(email);
     }
@@ -139,7 +167,12 @@ public class DataInitializer {
     private void createService(Dentiste d, String nom, String type, String desc, double tarif) {
         ServiceMedical s = new ServiceMedical();
         s.setNomSM(nom);
-        s.setTypeSM(type);
+        try {
+            s.setTypeSM(com.enit.backoffice.entity.TypeServiceMedical.fromLabel(type));
+        } catch (IllegalArgumentException e) {
+             // Fallback or ignore in initializer
+             System.err.println("Invalid service type: " + type);
+        }
         s.setDescriptionSM(desc);
         s.setTarifSM(BigDecimal.valueOf(tarif));
         s.setDentiste(d);
@@ -166,9 +199,5 @@ public class DataInitializer {
         a.setDescriptionAM(desc);
         a.setTarifAM(BigDecimal.valueOf(tarif));
         acteMedicalDAO.addActe(a);
-    }
-
-    private String hashPwd(String pwd) {
-        return BCrypt.hashpw(pwd, BCrypt.gensalt());
     }
 }

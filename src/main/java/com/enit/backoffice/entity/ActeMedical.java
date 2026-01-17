@@ -1,11 +1,14 @@
 package com.enit.backoffice.entity;
 
 import jakarta.persistence.*;
+import java.io.Serializable;
 import java.math.BigDecimal;
 
 @Entity
 @Table(name = "acte_medical")
-public class ActeMedical {
+public class ActeMedical implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

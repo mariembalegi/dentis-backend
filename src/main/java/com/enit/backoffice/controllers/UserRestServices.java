@@ -42,6 +42,9 @@ public class UserRestServices {
 	
 	@EJB
 	IUserDAO userDAO;
+    
+    @EJB
+    com.enit.backoffice.dao.IServiceMedicalDAO serviceDAO;
 	
      
 	  @GET
@@ -68,11 +71,18 @@ public class UserRestServices {
 	  @Path("/login")
 	  @Consumes(MediaType.APPLICATION_JSON)
 	  @Produces(MediaType.APPLICATION_JSON)
-
-	  public Response login(User user, @Context HttpServletRequest req) {
+	  public Response login(com.enit.backoffice.dto.LoginRequestDTO loginRequest, @Context HttpServletRequest req) {
 		  HashMap<String, Object> response = new HashMap<>();
-		  User userFromDB = userDAO.findByEmail(user.getEmail());
+		  System.out.println("Login attempt for: " + loginRequest.getEmail());
+		  
+		  if (loginRequest.getEmail() == null || loginRequest.getMotDePasse() == null) {
+			  response.put("error", "Email and password are required");
+			  return Response.status(Response.Status.BAD_REQUEST).entity(response).build();
+		  }
+
+		  User userFromDB = userDAO.findByEmail(loginRequest.getEmail());
                    if(userFromDB == null) {
+                	   System.out.println("User not found: " + loginRequest.getEmail());
                        return Response.status(Response.Status.UNAUTHORIZED).entity(new java.util.HashMap<String, Object>() {{
                            put("error", "User not found");
                        }}).build();
@@ -80,8 +90,9 @@ public class UserRestServices {
 		  String role;
 		  LoginUserResponseDTO dto;
 		  
-		  boolean passwordMatches = BCrypt.checkpw(user.getMotDePasse(), userFromDB.getMotDePasse());
+		  boolean passwordMatches = BCrypt.checkpw(loginRequest.getMotDePasse(), userFromDB.getMotDePasse());
 		  if (!passwordMatches) {
+			  System.out.println("Password mismatch for: " + loginRequest.getEmail());
 		      response.put("message", "Password incorrect!");
 		      return Response.status(Response.Status.UNAUTHORIZED).entity(response).build();
 		  }
@@ -94,8 +105,8 @@ public class UserRestServices {
             role = "PATIENT";
             LoginPatientResponseDTO pDto = new LoginPatientResponseDTO();
             pDto.setDateNaissanceP(patient.getDateNaissanceP());
-            pDto.setGroupeSanguinP(patient.getGroupeSanguinP());
-            pDto.setRecouvrementP(patient.getRecouvrementP());
+            pDto.setGroupeSanguinP(patient.getGroupeSanguinP() != null ? patient.getGroupeSanguinP().toString() : null);
+            pDto.setRecouvrementP(patient.getRecouvrementP() != null ? patient.getRecouvrementP().getLabel() : null);
             dto = pDto;
 
           } else if (userFromDB instanceof Dentiste dentiste) {
@@ -164,11 +175,17 @@ public class UserRestServices {
           p.setEmail(dto.getEmail());
           p.setMotDePasse(dto.getMotDePasse());
           p.setTel(dto.getTel());
-          p.setSexe(dto.getSexe());
+          if (dto.getSexe() != null) {
+              p.setSexe(com.enit.backoffice.entity.Sexe.valueOf(dto.getSexe()));
+          }
           p.setPhoto(dto.getPhoto());
           p.setDateNaissanceP(dto.getDateNaissanceP());
-          p.setGroupeSanguinP(dto.getGroupeSanguinP());
-          p.setRecouvrementP(dto.getRecouvrementP());
+          if (dto.getGroupeSanguinP() != null) {
+              p.setGroupeSanguinP(com.enit.backoffice.entity.GroupeSanguin.valueOf(dto.getGroupeSanguinP()));
+          }
+          if (dto.getRecouvrementP() != null) {
+              p.setRecouvrementP(com.enit.backoffice.entity.TypeRecouvrement.fromLabel(dto.getRecouvrementP()));
+          }
           
           userDAO.addUser(p);
           return Response.ok(new java.util.HashMap<String, Object>() {{
@@ -193,10 +210,15 @@ public class UserRestServices {
           d.setEmail(dto.getEmail());
           d.setMotDePasse(dto.getMotDePasse());
           d.setTel(dto.getTel());
-          d.setSexe(dto.getSexe());
+          if (dto.getSexe() != null) {
+              d.setSexe(com.enit.backoffice.entity.Sexe.valueOf(dto.getSexe()));
+          }
           d.setPhoto(dto.getPhoto());
           d.setDiplome(dto.getDiplome());
-          d.setVille(dto.getVille());
+          d.setSpecialite(dto.getSpecialite());
+          d.setGouvernorat(dto.getGouvernorat());
+          d.setDelegation(dto.getDelegation());
+          d.setAdresse(dto.getAdresse());
           
           userDAO.addUser(d);
           return Response.ok(new java.util.HashMap<String, Object>() {{
@@ -210,26 +232,5 @@ public class UserRestServices {
       @Produces(MediaType.APPLICATION_JSON)
       public Response getAllPatients() {
     	  return Response.ok(userDAO.getAllPatients()).build();
-      }
-      
-      @GET
-      @Path("/search/dentist")
-      @Produces(MediaType.APPLICATION_JSON)
-      public Response searchDentists(@jakarta.ws.rs.QueryParam("q") String keyword, @jakarta.ws.rs.QueryParam("loc") String location) {
-          java.util.List<Dentiste> dentistes = userDAO.searchDentists(keyword, location);
-          
-          // Map to DTO to avoid recursion/infinite loop with bidirectional relationships
-          java.util.List<java.util.Map<String, Object>> result = dentistes.stream().map(d -> {
-              java.util.Map<String, Object> map = new java.util.HashMap<>();
-              map.put("id", d.getId());
-              map.put("nom", d.getNom());
-              map.put("prenom", d.getPrenom());
-              map.put("ville", d.getVille());
-              map.put("photo", d.getPhoto());
-              map.put("tel", d.getTel());
-              return map;
-          }).collect(java.util.stream.Collectors.toList());
-          
-          return Response.ok(result).build();
       }
 }

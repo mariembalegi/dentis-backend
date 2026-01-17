@@ -28,4 +28,6 @@ public interface IUserDAO {
     
     // Rechercher les dentistes
     public java.util.List<com.enit.backoffice.entity.Dentiste> searchDentists(String keyword, String location);
+
+    public java.util.List<com.enit.backoffice.entity.Dentiste> findDentistsByName(String keyword);
 }

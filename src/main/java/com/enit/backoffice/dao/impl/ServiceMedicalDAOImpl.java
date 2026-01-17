@@ -45,4 +45,12 @@ public class ServiceMedicalDAOImpl implements IServiceMedicalDAO {
                  .setParameter("dentistId", dentistId)
                  .getResultList();
     }
+
+    @Override
+    public List<String> findServiceNamesLike(String keyword) {
+        return em.createQuery("SELECT DISTINCT s.nomSM FROM ServiceMedical s WHERE LOWER(s.nomSM) LIKE :keyword", String.class)
+                 .setParameter("keyword", "%" + keyword.toLowerCase() + "%")
+                 .setMaxResults(10)
+                 .getResultList();
+    }
 }

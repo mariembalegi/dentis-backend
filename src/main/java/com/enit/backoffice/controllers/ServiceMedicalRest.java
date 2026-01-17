@@ -33,7 +33,7 @@ public class ServiceMedicalRest {
         ServiceMedicalDTO dto = new ServiceMedicalDTO();
         dto.setNumSM(s.getNumSM());
         dto.setNomSM(s.getNomSM());
-        dto.setTypeSM(s.getTypeSM());
+        dto.setTypeSM(s.getTypeSM() != null ? s.getTypeSM().getLabel() : null);
         dto.setDescriptionSM(s.getDescriptionSM());
         dto.setTarifSM(s.getTarifSM());
         dto.setImage(s.getImage());
@@ -61,7 +61,9 @@ public class ServiceMedicalRest {
         Dentiste dentiste = (Dentiste) user;
         ServiceMedical service = new ServiceMedical();
         service.setNomSM(dto.getNomSM());
-        service.setTypeSM(dto.getTypeSM());
+        if (dto.getTypeSM() != null) {
+            service.setTypeSM(com.enit.backoffice.entity.TypeServiceMedical.fromLabel(dto.getTypeSM()));
+        }
         service.setDescriptionSM(dto.getDescriptionSM());
         service.setTarifSM(dto.getTarifSM());
         service.setImage(dto.getImage()); // Base64
@@ -89,7 +91,9 @@ public class ServiceMedicalRest {
         }
 
         service.setNomSM(dto.getNomSM());
-        service.setTypeSM(dto.getTypeSM());
+        if (dto.getTypeSM() != null) {
+            service.setTypeSM(com.enit.backoffice.entity.TypeServiceMedical.fromLabel(dto.getTypeSM()));
+        }
         service.setDescriptionSM(dto.getDescriptionSM());
         service.setTarifSM(dto.getTarifSM());
         service.setImage(dto.getImage());
