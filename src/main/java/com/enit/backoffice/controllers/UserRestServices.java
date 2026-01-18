@@ -437,4 +437,309 @@ public class UserRestServices {
               put("message", "Horaires updated successfully");
           }}).build();
       }
+
+      // ============== ADMIN ENDPOINTS ==============
+
+      private User getAuthenticatedUser(HttpServletRequest req) {
+          String authHeader = req.getHeader("Authorization");
+          if (authHeader != null && authHeader.startsWith("Bearer ")) {
+              String token = authHeader.substring(7);
+              try {
+                  Key key = Keys.hmacShaKeyFor("MaCleSuperSecrete1234567890123456".getBytes(StandardCharsets.UTF_8));
+                  io.jsonwebtoken.Claims claims = Jwts.parserBuilder()
+                          .setSigningKey(key)
+                          .build()
+                          .parseClaimsJws(token)
+                          .getBody();
+                  String email = claims.getSubject();
+                  if (email != null) {
+                      return userDAO.findByEmail(email);
+                  }
+              } catch (Exception e) {
+                  System.out.println("JWT Warning: " + e.getMessage());
+              }
+          }
+          return null;
+      }
+
+      @GET
+      @Path("/users")
+      @Produces(MediaType.APPLICATION_JSON)
+      public Response getAllUsers(@Context HttpServletRequest req) {
+          User currentUser = getAuthenticatedUser(req);
+          if (currentUser == null || !(currentUser instanceof Admin)) {
+              return Response.status(Response.Status.FORBIDDEN)
+                  .entity(new java.util.HashMap<String, Object>() {{
+                      put("error", "Only admin can access this resource");
+                  }}).build();
+          }
+          
+          java.util.List<User> users = userDAO.findAll();
+          
+          java.util.List<java.util.Map<String, Object>> result = new java.util.ArrayList<>();
+          for (User u : users) {
+              java.util.Map<String, Object> userMap = new java.util.HashMap<>();
+              userMap.put("id", u.getId());
+              userMap.put("nom", u.getNom());
+              userMap.put("prenom", u.getPrenom());
+              userMap.put("email", u.getEmail());
+              userMap.put("tel", u.getTel());
+              userMap.put("photo", u.getPhoto());
+              
+              if (u instanceof Dentiste) {
+                  Dentiste d = (Dentiste) u;
+                  userMap.put("role", "DENTISTE");
+                  userMap.put("gouvernorat", d.getGouvernorat());
+                  userMap.put("delegation", d.getDelegation());
+                  userMap.put("adresse", d.getAdresse());
+                  userMap.put("specialite", d.getSpecialite());
+                  userMap.put("diplome", d.getDiplome());
+              } else if (u instanceof Patient) {
+                  userMap.put("role", "PATIENT");
+                  userMap.put("dateNaissance", ((Patient) u).getDateNaissanceP());
+                  userMap.put("groupeSanguin", ((Patient) u).getGroupeSanguinP());
+                  userMap.put("recouvrement", ((Patient) u).getRecouvrementP());
+              } else if (u instanceof Admin) {
+                  userMap.put("role", "ADMIN");
+              }
+              
+              result.add(userMap);
+          }
+          
+          return Response.ok(result).build();
+      }
+
+      @GET
+      @Path("/dentists")
+      @Produces(MediaType.APPLICATION_JSON)
+      public Response getAllDentists() {
+          java.util.List<User> users = userDAO.findAll();
+          
+          java.util.List<java.util.Map<String, Object>> result = new java.util.ArrayList<>();
+          for (User u : users) {
+              if (u instanceof Dentiste) {
+                  Dentiste d = (Dentiste) u;
+                  java.util.Map<String, Object> dentistMap = new java.util.HashMap<>();
+                  dentistMap.put("id", d.getId());
+                  dentistMap.put("nom", d.getNom());
+                  dentistMap.put("prenom", d.getPrenom());
+                  dentistMap.put("email", d.getEmail());
+                  dentistMap.put("tel", d.getTel());
+                  dentistMap.put("gouvernorat", d.getGouvernorat());
+                  dentistMap.put("delegation", d.getDelegation());
+                  dentistMap.put("adresse", d.getAdresse());
+                  dentistMap.put("photo", d.getPhoto());
+                  dentistMap.put("specialite", d.getSpecialite());
+                  dentistMap.put("diplome", d.getDiplome());
+                  result.add(dentistMap);
+              }
+          }
+          
+          return Response.ok(result).build();
+      }
+
+      @GET
+      @Path("/patients")
+      @Produces(MediaType.APPLICATION_JSON)
+      public Response getAllPatients(@Context HttpServletRequest req) {
+          User currentUser = getAuthenticatedUser(req);
+          if (currentUser == null || !(currentUser instanceof Admin)) {
+              return Response.status(Response.Status.FORBIDDEN)
+                  .entity(new java.util.HashMap<String, Object>() {{
+                      put("error", "Only admin can access this resource");
+                  }}).build();
+          }
+          
+          java.util.List<User> users = userDAO.findAll();
+          
+          java.util.List<java.util.Map<String, Object>> result = new java.util.ArrayList<>();
+          for (User u : users) {
+              if (u instanceof Patient) {
+                  Patient p = (Patient) u;
+                  java.util.Map<String, Object> patientMap = new java.util.HashMap<>();
+                  patientMap.put("id", p.getId());
+                  patientMap.put("nom", p.getNom());
+                  patientMap.put("prenom", p.getPrenom());
+                  patientMap.put("email", p.getEmail());
+                  patientMap.put("tel", p.getTel());
+                  patientMap.put("gouvernorat", p.getGouvernorat());
+                  patientMap.put("delegation", p.getDelegation());
+                  patientMap.put("adresse", p.getAdresse());
+                  patientMap.put("photo", p.getPhoto());
+                  patientMap.put("dateNaissance", p.getDateNaissanceP());
+                  patientMap.put("groupeSanguin", p.getGroupeSanguinP());
+                  patientMap.put("recouvrement", p.getRecouvrementP());
+                  result.add(patientMap);
+              }
+          }
+          
+          return Response.ok(result).build();
+      }
+
+      @GET
+      @Path("/user/{id}")
+      @Produces(MediaType.APPLICATION_JSON)
+      public Response getUserById(@PathParam("id") int id) {
+          User user = userDAO.findById(id);
+          
+          if (user == null) {
+              return Response.status(Response.Status.NOT_FOUND)
+                  .entity(new java.util.HashMap<String, Object>() {{
+                      put("error", "User not found");
+                  }}).build();
+          }
+          
+          java.util.Map<String, Object> userMap = new java.util.HashMap<>();
+          userMap.put("id", user.getId());
+          userMap.put("nom", user.getNom());
+          userMap.put("prenom", user.getPrenom());
+          userMap.put("email", user.getEmail());
+          userMap.put("tel", user.getTel());
+          userMap.put("sexe", user.getSexe() != null ? user.getSexe().toString() : null);
+          userMap.put("photo", user.getPhoto());
+          
+          if (user instanceof Dentiste) {
+              Dentiste d = (Dentiste) user;
+              userMap.put("role", "DENTISTE");
+              userMap.put("gouvernorat", d.getGouvernorat());
+              userMap.put("delegation", d.getDelegation());
+              userMap.put("adresse", d.getAdresse());
+              userMap.put("specialite", d.getSpecialite());
+              userMap.put("diplome", d.getDiplome());
+          } else if (user instanceof Patient) {
+              Patient p = (Patient) user;
+              userMap.put("role", "PATIENT");
+              userMap.put("dateNaissance", p.getDateNaissanceP() != null ? p.getDateNaissanceP().toString() : null);
+              userMap.put("groupeSanguin", p.getGroupeSanguinP() != null ? p.getGroupeSanguinP().toString() : null);
+              userMap.put("recouvrement", p.getRecouvrementP() != null ? p.getRecouvrementP().toString() : null);
+          } else if (user instanceof Admin) {
+              userMap.put("role", "ADMIN");
+          }
+          
+          return Response.ok(userMap).build();
+      }
+
+      @PUT
+      @Path("/user/{id}")
+      @Consumes(MediaType.APPLICATION_JSON)
+      @Produces(MediaType.APPLICATION_JSON)
+      public Response updateUser(@PathParam("id") int id, java.util.Map<String, Object> data, @Context HttpServletRequest req) {
+          User currentUser = getAuthenticatedUser(req);
+          
+          if (currentUser == null) {
+              return Response.status(Response.Status.UNAUTHORIZED)
+                  .entity(new java.util.HashMap<String, Object>() {{
+                      put("error", "Unauthorized");
+                  }}).build();
+          }
+          
+          boolean isAdmin = currentUser instanceof Admin;
+          boolean isSelf = currentUser.getId() == id;
+          
+          if (!isAdmin && !isSelf) {
+              return Response.status(Response.Status.FORBIDDEN)
+                  .entity(new java.util.HashMap<String, Object>() {{
+                      put("error", "You can only update your own profile");
+                  }}).build();
+          }
+          
+          User user = userDAO.findById(id);
+          if (user == null) {
+              return Response.status(Response.Status.NOT_FOUND)
+                  .entity(new java.util.HashMap<String, Object>() {{
+                      put("error", "User not found");
+                  }}).build();
+          }
+          
+          // Update common User fields
+          if (data.containsKey("nom") && data.get("nom") != null) {
+              user.setNom((String) data.get("nom"));
+          }
+          if (data.containsKey("prenom") && data.get("prenom") != null) {
+              user.setPrenom((String) data.get("prenom"));
+          }
+          if (data.containsKey("email") && data.get("email") != null) {
+              user.setEmail((String) data.get("email"));
+          }
+          if (data.containsKey("tel") && data.get("tel") != null) {
+              user.setTel(Integer.parseInt(data.get("tel").toString()));
+          }
+          if (data.containsKey("sexe") && data.get("sexe") != null) {
+              user.setSexe(com.enit.backoffice.entity.Sexe.valueOf((String) data.get("sexe")));
+          }
+          if (data.containsKey("photo") && data.get("photo") != null) {
+              user.setPhoto((String) data.get("photo"));
+          }
+          
+          // Update Dentiste-specific fields
+          if (user instanceof Dentiste) {
+              Dentiste d = (Dentiste) user;
+              if (data.containsKey("gouvernorat") && data.get("gouvernorat") != null) {
+                  d.setGouvernorat((String) data.get("gouvernorat"));
+              }
+              if (data.containsKey("delegation") && data.get("delegation") != null) {
+                  d.setDelegation((String) data.get("delegation"));
+              }
+              if (data.containsKey("adresse") && data.get("adresse") != null) {
+                  d.setAdresse((String) data.get("adresse"));
+              }
+              if (data.containsKey("specialite") && data.get("specialite") != null) {
+                  d.setSpecialite((String) data.get("specialite"));
+              }
+              if (data.containsKey("diplome") && data.get("diplome") != null) {
+                  d.setDiplome((String) data.get("diplome"));
+              }
+          }
+          
+          // Update Patient-specific fields
+          if (user instanceof Patient) {
+              Patient p = (Patient) user;
+              if (data.containsKey("dateNaissance") && data.get("dateNaissance") != null) {
+                  p.setDateNaissanceP(java.time.LocalDate.parse((String) data.get("dateNaissance")));
+              }
+              if (data.containsKey("groupeSanguin") && data.get("groupeSanguin") != null) {
+                  p.setGroupeSanguinP(com.enit.backoffice.entity.GroupeSanguin.valueOf((String) data.get("groupeSanguin")));
+              }
+              if (data.containsKey("recouvrement") && data.get("recouvrement") != null) {
+                  p.setRecouvrementP(com.enit.backoffice.entity.TypeRecouvrement.valueOf((String) data.get("recouvrement")));
+              }
+          }
+          
+          userDAO.updateUser(user);
+          
+          return Response.ok(new java.util.HashMap<String, Object>() {{
+              put("message", "User updated successfully");
+              put("id", user.getId());
+          }}).build();
+      }
+
+      @jakarta.ws.rs.DELETE
+      @Path("/user/{id}")
+      @Produces(MediaType.APPLICATION_JSON)
+      public Response deleteUser(@PathParam("id") int id, @Context HttpServletRequest req) {
+          User currentUser = getAuthenticatedUser(req);
+          
+          if (currentUser == null || !(currentUser instanceof Admin)) {
+              return Response.status(Response.Status.FORBIDDEN)
+                  .entity(new java.util.HashMap<String, Object>() {{
+                      put("error", "Only admin can delete users");
+                  }}).build();
+          }
+          
+          User user = userDAO.findById(id);
+          if (user == null) {
+              return Response.status(Response.Status.NOT_FOUND)
+                  .entity(new java.util.HashMap<String, Object>() {{
+                      put("error", "User not found");
+                  }}).build();
+          }
+          
+          userDAO.deleteUser(id);
+          
+          final int deletedId = id;
+          return Response.ok(new java.util.HashMap<String, Object>() {{
+              put("message", "User deleted successfully");
+              put("id", deletedId);
+          }}).build();
+      }
 }

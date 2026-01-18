@@ -147,4 +147,37 @@ public class UserDAOImpl implements IUserDAO {
             }
         }
     }
+
+    @Override
+    public List<User> findAll() {
+        return em.createQuery("SELECT u FROM User u", User.class).getResultList();
+    }
+
+    @Override
+    public void updateUser(User user) {
+        em.merge(user);
+    }
+
+    @Override
+    public void deleteUser(int id) {
+        User user = em.find(User.class, id);
+        if (user != null) {
+            em.remove(user);
+        }
+    }
+
+    @Override
+    public long countPatients() {
+        return em.createQuery("SELECT COUNT(p) FROM Patient p", Long.class).getSingleResult();
+    }
+
+    @Override
+    public long countDentistes() {
+        return em.createQuery("SELECT COUNT(d) FROM Dentiste d", Long.class).getSingleResult();
+    }
+
+    @Override
+    public long countDistinctGouvernorats() {
+        return em.createQuery("SELECT COUNT(DISTINCT d.gouvernorat) FROM Dentiste d WHERE d.gouvernorat IS NOT NULL AND d.gouvernorat <> ''", Long.class).getSingleResult();
+    }
 }

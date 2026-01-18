@@ -39,4 +39,16 @@ public interface IUserDAO {
     public void updateDentist(com.enit.backoffice.entity.Dentiste dentiste);
     public java.util.List<com.enit.backoffice.entity.Horaire> getDentistHoraires(int dentistId);
     public void updateDentistHoraires(int dentistId, java.util.List<com.enit.backoffice.entity.Horaire> horaires);
+    
+    // Get all users
+    public List<User> findAll();
+    
+    // Update and delete user
+    public void updateUser(User user);
+    public void deleteUser(int id);
+    
+    // Stats
+    public long countPatients();
+    public long countDentistes();
+    public long countDistinctGouvernorats();
 }

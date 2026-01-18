@@ -27,8 +27,6 @@ public class Dentiste extends User {
     @Column(nullable = true, length = 255)
     private String adresse;
 
-    private boolean verifie;
-
     @OneToMany(mappedBy = "dentiste", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Publication> publications;
 
@@ -85,14 +83,6 @@ public class Dentiste extends User {
 
     public void setAdresse(String adresse) {
         this.adresse = adresse;
-    }
-
-    public boolean isVerifie() {
-        return verifie;
-    }
-
-    public void setVerifie(boolean verifie) {
-        this.verifie = verifie;
     }
 
     public List<Publication> getPublications() {
