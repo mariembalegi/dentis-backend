@@ -322,4 +322,106 @@ public class RendezvousRest {
             put("message", "Rendezvous supprimé");
         }}).build();
     }
+
+    // ============== ACTES MEDICAUX ENDPOINTS ==============
+
+    @GET
+    @Path("/{rendezvousId}/actes")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getActesByRendezvous(@PathParam("rendezvousId") int rendezvousId, 
+                                         @Context HttpServletRequest req) {
+        User user = getAuthenticatedUser(req);
+        if (user == null) {
+            return Response.status(Response.Status.UNAUTHORIZED)
+                .entity(new java.util.HashMap<String, Object>() {{
+                    put("error", "Unauthorized");
+                }}).build();
+        }
+
+        Rendezvous rv = rvDAO.findById(rendezvousId);
+        if (rv == null) {
+            return Response.status(Response.Status.NOT_FOUND)
+                .entity(new java.util.HashMap<String, Object>() {{
+                    put("error", "Rendez-vous not found");
+                }}).build();
+        }
+
+        // Check authorization
+        boolean isAuthorized = (user instanceof Dentiste && rv.getDentiste().getId() == user.getId()) ||
+                              (user instanceof Patient && rv.getPatient() != null && rv.getPatient().getId() == user.getId());
+
+        if (!isAuthorized) {
+            return Response.status(Response.Status.FORBIDDEN)
+                .entity(new java.util.HashMap<String, Object>() {{
+                    put("error", "Access denied");
+                }}).build();
+        }
+
+        // Utiliser le DAO pour éviter le lazy loading
+        List<ActeMedical> actes = acteDAO.findByRendezvousId(rendezvousId);
+        List<java.util.Map<String, Object>> actesData = new java.util.ArrayList<>();
+
+        for (ActeMedical acte : actes) {
+            java.util.Map<String, Object> acteMap = new java.util.HashMap<>();
+            acteMap.put("acteId", acte.getIdAM());
+            acteMap.put("serviceId", acte.getServiceMedical().getNumSM());
+            acteMap.put("serviceName", acte.getServiceMedical().getNomSM());
+            acteMap.put("serviceType", acte.getServiceMedical().getTypeSM() != null ? 
+                        acte.getServiceMedical().getTypeSM().toString() : null);
+            acteMap.put("price", acte.getServiceMedical().getTarifSM());
+            actesData.add(acteMap);
+        }
+
+        return Response.ok(actesData).build();
+    }
+
+    @GET
+    @Path("/{rendezvousId}/total-price")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getTotalPrice(@PathParam("rendezvousId") int rendezvousId, 
+                                  @Context HttpServletRequest req) {
+        User user = getAuthenticatedUser(req);
+        if (user == null) {
+            return Response.status(Response.Status.UNAUTHORIZED)
+                .entity(new java.util.HashMap<String, Object>() {{
+                    put("error", "Unauthorized");
+                }}).build();
+        }
+
+        Rendezvous rv = rvDAO.findById(rendezvousId);
+        if (rv == null) {
+            return Response.status(Response.Status.NOT_FOUND)
+                .entity(new java.util.HashMap<String, Object>() {{
+                    put("error", "Rendez-vous not found");
+                }}).build();
+        }
+
+        // Check authorization
+        boolean isAuthorized = (user instanceof Dentiste && rv.getDentiste().getId() == user.getId()) ||
+                              (user instanceof Patient && rv.getPatient() != null && rv.getPatient().getId() == user.getId());
+
+        if (!isAuthorized) {
+            return Response.status(Response.Status.FORBIDDEN)
+                .entity(new java.util.HashMap<String, Object>() {{
+                    put("error", "Access denied");
+                }}).build();
+        }
+
+        double totalPrice = 0.0;
+        // Utiliser le DAO pour éviter le lazy loading
+        List<ActeMedical> actes = acteDAO.findByRendezvousId(rendezvousId);
+        
+        for (ActeMedical acte : actes) {
+            if (acte.getServiceMedical().getTarifSM() != null) {
+                totalPrice += acte.getServiceMedical().getTarifSM();
+            }
+        }
+
+        final double total = totalPrice;
+        return Response.ok(new java.util.HashMap<String, Object>() {{
+            put("rendezvousId", rendezvousId);
+            put("totalPrice", total);
+            put("actesCount", actes.size());
+        }}).build();
+    }
 }

@@ -5,7 +5,7 @@ xsi:schemaLocation="http://java.sun.com/xml/ns/persistence http://java.sun.com/x
 version="1.0">
 <persistence-unit name="dentisUnit"> 
 <jta-data-source>java:/dentisDS</jta-data-source> 
-<properties> <property name="hibernate.hbm2ddl.auto" value="update"/> 
+<properties> <property name="hibernate.hbm2ddl.auto" value="create"/> 
 </properties> 
 </persistence-unit> 
 </persistence>
